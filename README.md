@@ -1,11 +1,11 @@
 # PCBuilder
 
-Website bán máy tính xây dựng = React, Bootstrap, Express, PostgreSQL và Prisma 7.
+Bài tập xây dựng website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 7.
 
 ## Yêu cầu
 
-- Node.js 24 LTS & npm
-- PostgreSQL đã được cài đặt & đang chạy trên máy
+- Node.js 24 LTS và npm
+- PostgreSQL đã được cài đặt và đang chạy trên máy
 - Git
 
 Mỗi thành viên chạy frontend, backend và cơ sở dữ liệu riêng trên máy của mình.
@@ -13,7 +13,7 @@ Mỗi thành viên chạy frontend, backend và cơ sở dữ liệu riêng trê
 ## Thiết lập lần đầu
 
 1. Clone repository và mở terminal tại thư mục gốc của dự án.
-2. Mở SQL Shell (psql), đăng nhập bằng tài khoản quản trị PostgreSQL và chạy các lệnh sau một lần. Thay `YOUR_PASSWORD` bằng mật khẩu Postgre của bạn:
+2. Mở SQL Shell (psql), đăng nhập bằng tài khoản quản trị PostgreSQL và chạy các lệnh sau một lần. Thay `YOUR_PASSWORD` bằng mật khẩu của bạn:
 
    ```sql
    CREATE ROLE pcstore_dev WITH LOGIN CREATEDB PASSWORD 'YOUR_PASSWORD';
@@ -67,7 +67,7 @@ npm run dev
 ```
 
 Mở địa chỉ frontend do Vite hiển thị, thường là http://localhost:5173.
-Kết quả kiểm tra kết nối phải hiển thị `"database": "connected"`.
+Trang chủ sẽ hiển thị danh sách sản phẩm. Mở chi tiết sản phẩm hoặc đăng ký tài khoản để thử các chức năng Sprint 1.
 Địa chỉ kiểm tra trạng thái API là http://localhost:3000/api/health.
 
 ## Sau khi pull thay đổi
@@ -82,4 +82,18 @@ npx prisma db seed
 
 Khi sửa schema, tạo migration có tên mô tả bằng `npx prisma migrate dev --name describe_change`, tạo lại Prisma Client và commit cả `prisma/schema.prisma` lẫn `prisma/migrations/`.
 
-Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed đảm bảo có đủ năm danh mục ban đầu, không tạo trùng hoặc xóa các bản ghi khác. Script không tự đồng bộ thay đổi giữa cơ sở dữ liệu của các thành viên; ID danh mục có thể khác nhau. Cần chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script seed. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
+Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm danh mục và sáu sản phẩm minh họa, không tạo trùng hoặc ghi đè các bản ghi đã có. Script không tự đồng bộ thay đổi giữa cơ sở dữ liệu của các thành viên; ID có thể khác nhau. Chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
+
+## Sprint 1
+
+- Danh sách và chi tiết sản phẩm; chọn danh mục; xem tồn kho, bảo hành và thông số.
+- Đăng ký, đăng nhập, đăng xuất; sửa họ tên và số điện thoại.
+- Backend kiểm tra quyền Customer/Admin; Admin có trang tổng quan chỉ xem.
+- Session lưu trong PostgreSQL; mật khẩu được băm; kiểm tra CSRF và giới hạn tần suất đăng ký/đăng nhập.
+
+Để tạo Admin dùng thử, điền cả `DEMO_ADMIN_EMAIL` và `DEMO_ADMIN_PASSWORD` vào `server/.env` trước khi chạy seed. Dùng email chưa được đăng ký làm Customer và mật khẩu dài 8–128 ký tự. Không có mật khẩu mặc định dùng chung. Chạy lại seed không đặt lại mật khẩu. Tài khoản Customer được đăng ký trên giao diện.
+
+Kiểm tra frontend: chạy `npm run lint` và `npm run build` trong `client`.
+Kiểm thử backend: chạy `npm test` trong `server`. Kiểm thử mật khẩu luôn chạy; kiểm thử tích hợp cần đặt `TEST_DATABASE_URL` trong `server/.env`. Tài khoản cơ sở dữ liệu cần quyền tạo schema. Kiểm thử tích hợp tạo và xóa schema tạm riêng, không sửa các bảng đã có.
+
+Xem [SPRINT1.md](SPRINT1.md) để biết tiêu chí kiểm tra, các API và phạm vi chưa triển khai.
