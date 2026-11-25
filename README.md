@@ -1,6 +1,6 @@
 # PCBuilder
 
-Bài tập xây dựng website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 7.
+Website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 7.
 
 ## Yêu cầu
 
@@ -8,7 +8,6 @@ Bài tập xây dựng website bán máy tính bằng React, Bootstrap, Express,
 - PostgreSQL đã được cài đặt và đang chạy trên máy
 - Git
 
-Mỗi thành viên chạy frontend, backend và cơ sở dữ liệu riêng trên máy của mình.
 
 ## Thiết lập lần đầu
 
@@ -67,7 +66,7 @@ npm run dev
 ```
 
 Mở địa chỉ frontend do Vite hiển thị, thường là http://localhost:5173.
-Trang chủ sẽ hiển thị danh sách sản phẩm. Mở chi tiết sản phẩm hoặc đăng ký tài khoản để thử các chức năng Sprint 1.
+Trang chủ sẽ hiển thị danh sách sản phẩm. Mở chi tiết, đăng ký tài khoản, thêm vào giỏ và thử đặt hàng COD.
 Địa chỉ kiểm tra trạng thái API là http://localhost:3000/api/health.
 
 ## Sau khi pull thay đổi
@@ -82,7 +81,7 @@ npx prisma db seed
 
 Khi sửa schema, tạo migration có tên mô tả bằng `npx prisma migrate dev --name describe_change`, tạo lại Prisma Client và commit cả `prisma/schema.prisma` lẫn `prisma/migrations/`.
 
-Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm danh mục và sáu sản phẩm minh họa, không tạo trùng hoặc ghi đè các bản ghi đã có. Script không tự đồng bộ thay đổi giữa cơ sở dữ liệu của các thành viên; ID có thể khác nhau. Chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
+Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm danh mục và sáu sản phẩm minh họa, không tạo trùng hoặc ghi đè các bản ghi đã có. Chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
 
 ## Sprint 1
 
@@ -93,7 +92,20 @@ Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm 
 
 Để tạo Admin dùng thử, điền cả `DEMO_ADMIN_EMAIL` và `DEMO_ADMIN_PASSWORD` vào `server/.env` trước khi chạy seed. Dùng email chưa được đăng ký làm Customer và mật khẩu dài 8–128 ký tự. Không có mật khẩu mặc định dùng chung. Chạy lại seed không đặt lại mật khẩu. Tài khoản Customer được đăng ký trên giao diện.
 
-Kiểm tra frontend: chạy `npm run lint` và `npm run build` trong `client`.
+Kiểm tra frontend: chạy `npm test`, `npm run lint` và `npm run build` trong `client`.
 Kiểm thử backend: chạy `npm test` trong `server`. Kiểm thử mật khẩu luôn chạy; kiểm thử tích hợp cần đặt `TEST_DATABASE_URL` trong `server/.env`. Tài khoản cơ sở dữ liệu cần quyền tạo schema. Kiểm thử tích hợp tạo và xóa schema tạm riêng, không sửa các bảng đã có.
 
-Xem [SPRINT1.md](SPRINT1.md) để biết tiêu chí kiểm tra, các API và phạm vi chưa triển khai.
+Xem [SPRINT1.md](SPRINT1.md) cho phần nền tảng và [SPRINT2.md](SPRINT2.md) cho bản cập nhật mới nhất.
+
+## Sprint 2
+
+- Tìm theo từ khóa; lọc danh mục, thương hiệu, giá, thông số, nhu cầu và tồn kho; sắp xếp kết quả.
+- Giỏ hàng lưu theo tài khoản; backend kiểm tra số lượng và tính tổng tiền.
+- Admin thêm/sửa/ẩn sản phẩm, quản lý danh mục/thương hiệu, cập nhật tồn kho và tải ảnh lên. Phiên bản sản phẩm giúp tránh ghi đè dữ liệu mới bằng form cũ.
+- Đặt hàng COD: kiểm tra giá/tồn mới nhất, trừ kho và tạo đơn trong cùng transaction, chống tạo đơn trùng khi gửi lại, lưu thông tin mua hàng tại thời điểm đặt và chỉ cho đọc đơn của chính mình.
+
+Để cập nhật từ Sprint 1, chép các tệp mới/thay đổi vào đúng đường dẫn, giữ `.env` riêng. Trong `server`, chạy lần lượt `npm ci`, `npx prisma migrate dev`, `npx prisma generate`, `npx prisma db seed`, rồi `npm run dev`. Trong terminal khác, vào `client`, chạy `npm ci` và `npm run dev`. Không cần reset cơ sở dữ liệu.
+
+Biến `SHIPPING_FEE_VND` trong `server/.env` đặt phí giao hàng cố định, mặc định 30000 VND. Ảnh tải lên lưu ở `server/uploads/` và không được đưa vào Git; cũng có thể dùng URL ảnh HTTPS. Ảnh và dữ liệu trên máy từng thành viên không tự đồng bộ. Khi mất phản hồi đặt hàng, dùng nút Retry this checkout để lấy lại kết quả với cùng khóa, kể cả sau khi tải lại trang.
+
+API mới nằm trong `server/src/catalog.js`, `admin-catalog.js` và `commerce.js`, được đăng ký tại `app.js`. Hủy đơn, mô phỏng thanh toán và xử lý giao hàng thuộc Sprint 3. Xem [SPRINT2.md](SPRINT2.md) để biết chi tiết và tiêu chí kiểm tra.

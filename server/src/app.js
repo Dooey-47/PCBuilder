@@ -3,6 +3,14 @@ import session from "express-session";
 import { rateLimit } from "express-rate-limit";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { resolve } from "node:path";
+import { registerCatalog } from "./catalog.js";
+import { httpError } from "./http-errors.js";
+import { registerCommerce } from "./commerce.js";
+import {
+  registerAdminCatalog,
+  registerUploadDelivery,
+} from "./admin-catalog.js";
 import { hashPassword, verifyPassword } from "./passwords.js";
 
 const publicUser = {
@@ -29,12 +37,6 @@ const login = z
   .object({ email, password: z.string().min(1).max(128) })
   .strict();
 const profile = z.object({ name, phone }).strict();
-const productInclude = {
-  category: true,
-  brand: true,
-  specs: { orderBy: { id: "asc" } },
-  images: { orderBy: { sortOrder: "asc" } },
-};
 
 function validated(schema, body) {
   const result = schema.safeParse(body);
@@ -58,6 +60,8 @@ export function createApp({
   sessionStore,
   sessionSecret,
   production = false,
+  shippingFee = "30000",
+  uploadDir = resolve(process.cwd(), "uploads"),
 }) {
   if (!sessionSecret || sessionSecret.length < 32)
     throw new Error("SESSION_SECRET must contain at least 32 characters.");
@@ -71,57 +75,15 @@ export function createApp({
     });
     next();
   });
-  app.use(express.json({ limit: "16kb" }));
+  app.use(express.json({ limit: "64kb" }));
 
   // Public catalog requests do not need a session or a session cookie.
   app.get("/api/health", async (_req, res) => {
     const categoryCount = await prisma.category.count();
     res.json({ ok: true, database: "connected", categoryCount });
   });
-  app.get("/api/categories", async (_req, res) => {
-    res.json({
-      categories: await prisma.category.findMany({ orderBy: { name: "asc" } }),
-    });
-  });
-  app.get("/api/products", async (req, res) => {
-    const query = validated(
-      z
-        .object({
-          page: z.coerce.number().int().min(1).max(10000).default(1),
-          category: z.coerce.number().int().positive().optional(),
-        })
-        .strict(),
-      req.query,
-    );
-    const where = {
-      active: true,
-      ...(query.category ? { categoryId: query.category } : {}),
-    };
-    const pageSize = 9;
-    const [products, total] = await prisma.$transaction([
-      prisma.product.findMany({
-        where,
-        include: productInclude,
-        orderBy: { id: "asc" },
-        skip: (query.page - 1) * pageSize,
-        take: pageSize,
-      }),
-      prisma.product.count({ where }),
-    ]);
-    res.json({ products, total, page: query.page, pageSize });
-  });
-  app.get("/api/products/:id", async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isSafeInteger(id) || id < 1)
-      return res.status(404).json({ message: "Product not found." });
-    const product = await prisma.product.findFirst({
-      where: { id, active: true },
-      include: productInclude,
-    });
-    if (!product)
-      return res.status(404).json({ message: "Product not found." });
-    res.json({ product });
-  });
+  registerCatalog(app, prisma);
+  registerUploadDelivery(app, uploadDir);
 
   app.use(
     "/api",
@@ -149,12 +111,10 @@ export function createApp({
       !expected ||
       !timingSafeEqual(Buffer.from(token), Buffer.from(expected))
     ) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Your session changed or expired. Refresh the page and try again.",
-        });
+      return res.status(403).json({
+        message:
+          "Your session changed or expired. Refresh the page and try again.",
+      });
     }
     next();
   });
@@ -202,14 +162,22 @@ export function createApp({
   });
   app.post("/api/auth/register", authLimit, async (req, res) => {
     const input = validated(registration, req.body);
-    const user = await prisma.user.create({
-      data: {
-        name: input.name,
-        email: input.email,
-        phone: input.phone || null,
-        passwordHash: await hashPassword(input.password),
-      },
-    });
+    const user = await prisma.user
+      .create({
+        data: {
+          name: input.name,
+          email: input.email,
+          phone: input.phone || null,
+          passwordHash: await hashPassword(input.password),
+        },
+      })
+      .catch((error) => {
+        if (error.code === "P2002")
+          throw httpError(409, "This email is already registered.", {
+            email: ["Use another email or sign in."],
+          });
+        throw error;
+      });
     await signIn(req, res, user, 201);
   });
   app.post("/api/auth/login", authLimit, async (req, res) => {
@@ -260,6 +228,8 @@ export function createApp({
     ]);
     res.json({ products, customers });
   });
+  registerCommerce(app, { prisma, requireUser, shippingFee });
+  registerAdminCatalog(app, { prisma, requireUser, uploadDir });
   app.use("/api", (_req, res) =>
     res.status(404).json({ message: "Endpoint not found." }),
   );
@@ -267,24 +237,40 @@ export function createApp({
     if (error.code === "P2002")
       return res
         .status(409)
+        .json({ message: "A record with this SKU or name already exists." });
+    if (error.code === "P2003")
+      return res
+        .status(409)
         .json({
-          message: "This email is already registered.",
-          fields: { email: ["Use another email or sign in."] },
+          message:
+            "This record is used by a product or order and cannot be deleted.",
         });
+    if (error.code === "P2025")
+      return res.status(404).json({ message: "Record not found." });
+    if (error.code === "LIMIT_FILE_SIZE")
+      return res.status(413).json({ message: "Image must be at most 2 MB." });
+    if (error.code?.startsWith("LIMIT_"))
+      return res
+        .status(422)
+        .json({ message: "Upload one image using the image field." });
+    if (error.code === "ENOENT" && error.status === 404)
+      return res.status(404).json({ message: "Image not found." });
     if (error.type === "entity.parse.failed")
       return res.status(400).json({ message: "Invalid JSON request." });
     if (error.type === "entity.too.large")
       return res.status(413).json({ message: "Request is too large." });
-    if (error.status === 422)
+    if (error.status >= 400 && error.status < 500)
       return res
-        .status(422)
-        .json({ message: error.message, fields: error.fields });
+        .status(error.status)
+        .json({
+          message: error.message,
+          fields: error.fields,
+          code: error.code,
+        });
     console.error(error);
-    res
-      .status(503)
-      .json({
-        message: "The service is temporarily unavailable. Please try again.",
-      });
+    res.status(503).json({
+      message: "The service is temporarily unavailable. Please try again.",
+    });
   });
   return app;
 }

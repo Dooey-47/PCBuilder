@@ -8,3 +8,6 @@ coverage/
 !.env.example
 
 client-js-backup/
+
+# Local product uploads; use shared object storage for a hosted team environment.
+server/uploads/

@@ -148,6 +148,12 @@ export async function seedCatalog(db) {
               "24-month limited warranty. Demo terms for this exercise.",
             categoryId: categories.get(item.category).id,
             brandId: brand.id,
+            useCases:
+              item.sku === "DEMO-LAP-01" || item.sku === "DEMO-KEY-01"
+                ? ["study", "office"]
+                : item.sku === "DEMO-LAP-02" || item.sku === "DEMO-GPU-01"
+                  ? ["creative", "gaming"]
+                  : ["office", "creative"],
           },
         });
         for (const [name, value] of Object.entries(item.specs)) {

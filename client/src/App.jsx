@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Link,
   NavLink,
@@ -8,37 +8,21 @@ import {
   Routes,
   useNavigate,
   useParams,
-  useSearchParams,
 } from "react-router-dom";
 import { api } from "./api.js";
 import { useAuth } from "./auth-context.js";
-
-const money = (value) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(Number(value));
-
-function useRemote(path) {
-  const [result, setResult] = useState(null);
-  useEffect(() => {
-    let active = true;
-    api(path)
-      .then((data) => {
-        if (active) setResult({ path, data });
-      })
-      .catch((error) => {
-        if (active) setResult({ path, error });
-      });
-    return () => {
-      active = false;
-    };
-  }, [path]);
-  return result?.path === path
-    ? { ...result, loading: false }
-    : { loading: true };
-}
+import { useShop } from "./shop-context.js";
+import useRemote from "./useRemote.js";
+import { money } from "./format.js";
+import Catalog from "./Catalog.jsx";
+import { AddToCart } from "./shop-ui.jsx";
+import {
+  CartPage,
+  CheckoutPage,
+  OrderReceipt,
+  OrdersPage,
+} from "./ShopPages.jsx";
+import AdminCatalog from "./AdminCatalog.jsx";
 
 function Message({ children, error = false }) {
   return (
@@ -53,6 +37,7 @@ function Message({ children, error = false }) {
 
 function Layout() {
   const { user, loading, error, setUser } = useAuth();
+  const { cart } = useShop() ?? {};
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const navigate = useNavigate();
@@ -91,6 +76,12 @@ function Layout() {
             <NavLink to="/" end>
               Explore products
             </NavLink>
+            {user && (
+              <>
+                <NavLink to="/cart">Cart ({cart?.quantity ?? 0})</NavLink>
+                <NavLink to="/orders">My orders</NavLink>
+              </>
+            )}
             {user?.role === "ADMIN" && <NavLink to="/admin">Admin</NavLink>}
           </nav>
           <div className="account-nav">
@@ -155,225 +146,6 @@ function Stock({ stock }) {
   );
 }
 
-function ProductCard({ product }) {
-  const image = product.images[0];
-  return (
-    <article className="product-card">
-      <Link
-        to={`/products/${product.id}`}
-        className="product-image-link"
-        aria-label={`View ${product.name}`}
-      >
-        <span className="product-category">{product.category.name}</span>
-        {image && (
-          <img
-            src={image.url}
-            alt={image.alt}
-            loading="lazy"
-            width="480"
-            height="360"
-          />
-        )}
-        <span className="image-arrow" aria-hidden="true">
-          ↗
-        </span>
-      </Link>
-      <div className="product-info">
-        <p className="eyebrow muted">{product.brand.name}</p>
-        <h3>
-          <Link to={`/products/${product.id}`}>{product.name}</Link>
-        </h3>
-        <p className="product-spec-preview">
-          {product.specs
-            .slice(0, 2)
-            .map((spec) => spec.value)
-            .join(" · ")}
-        </p>
-        <div className="product-bottom">
-          <strong>{money(product.price)}</strong>
-          <Stock stock={product.stock} />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function Catalog() {
-  const [params, setParams] = useSearchParams();
-  const category = params.get("category") ?? "";
-  const page = Number(params.get("page") ?? 1);
-  const categories = useRemote("/categories");
-  const catalog = useRemote(
-    `/products?${new URLSearchParams({ ...(category ? { category } : {}), page: String(page) })}`,
-  );
-  const chosen = categories.data?.categories.find(
-    (item) => String(item.id) === category,
-  );
-  function selectCategory(id) {
-    setParams(id ? { category: String(id) } : {});
-  }
-  function setPage(value) {
-    setParams({ ...(category ? { category } : {}), page: String(value) });
-  }
-  return (
-    <div className="shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">
-            <span className="blue-dot" /> YOUR NEXT CHAPTER STARTS HERE
-          </p>
-          <h1>
-            Good tech.
-            <br />
-            <span>Great possibilities.</span>
-          </h1>
-          <p className="hero-description">
-            From your first line of code to your next big idea.
-            <br className="desktop-break" /> Find the right tools to make it
-            happen.
-          </p>
-          <a href="#catalog" className="button">
-            Explore the collection <span aria-hidden="true">↗</span>
-          </a>
-          <div className="hero-note">
-            <span aria-hidden="true">✓</span> Clear specifications. Upfront
-            prices.
-          </div>
-        </div>
-        <div className="hero-visual">
-          <div className="hero-orbit" />
-          <span className="hero-tag">BUILT FOR WHAT’S NEXT</span>
-          <img
-            src="/images/laptop.svg"
-            alt="Illustration of an open laptop"
-            width="480"
-            height="360"
-          />
-          <div className="hero-product-label">
-            <span>A fresh perspective.</span>
-            <strong>
-              Aster Air 14 <span aria-hidden="true">↗</span>
-            </strong>
-          </div>
-        </div>
-      </section>
-      <section className="benefit-strip" aria-label="Catalog information">
-        <div>
-          <span className="benefit-icon" aria-hidden="true">
-            ▦
-          </span>
-          <span>
-            <strong>Everything in one place</strong>
-            <small>Laptops, desktops & the details</small>
-          </span>
-        </div>
-        <div>
-          <span className="benefit-icon" aria-hidden="true">
-            ✓
-          </span>
-          <span>
-            <strong>Know what you’re choosing</strong>
-            <small>Specifications & warranty upfront</small>
-          </span>
-        </div>
-        <div>
-          <span className="benefit-icon" aria-hidden="true">
-            ◎
-          </span>
-          <span>
-            <strong>Availability at a glance</strong>
-            <small>Stock shown on every product</small>
-          </span>
-        </div>
-      </section>
-      <section id="catalog" className="catalog-section">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">FIND YOUR NEXT ESSENTIAL</p>
-            <h2>{chosen?.name ?? "Explore the collection"}</h2>
-          </div>
-          <span className="muted">
-            {catalog.data
-              ? `${catalog.data.total} products`
-              : "Our demo collection"}
-          </span>
-        </div>
-        <div className="category-tabs" aria-label="Product categories">
-          <button
-            className={!category ? "selected" : ""}
-            aria-pressed={!category}
-            onClick={() => selectCategory("")}
-          >
-            All products
-          </button>
-          {categories.data?.categories.map((item) => (
-            <button
-              key={item.id}
-              className={category === String(item.id) ? "selected" : ""}
-              aria-pressed={category === String(item.id)}
-              onClick={() => selectCategory(item.id)}
-            >
-              {item.name}
-            </button>
-          ))}
-        </div>
-        {categories.error && (
-          <Message error>
-            Categories could not be loaded. You can still browse all products.
-          </Message>
-        )}
-        {catalog.loading ? (
-          <Message>Loading products…</Message>
-        ) : catalog.error ? (
-          <Message error>
-            {catalog.error.message} Check that the backend and PostgreSQL are
-            running, then refresh.
-          </Message>
-        ) : catalog.data.products.length ? (
-          <div className="product-grid">
-            {catalog.data.products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <Message>
-            No products on this page.{" "}
-            <button className="text-button" onClick={() => setParams({})}>
-              View all products
-            </button>
-          </Message>
-        )}
-        {catalog.data && catalog.data.total > catalog.data.pageSize && (
-          <nav className="pagination-row" aria-label="Product pages">
-            <button
-              className="button button-secondary"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Previous
-            </button>
-            <span>
-              Page {page} of{" "}
-              {Math.ceil(catalog.data.total / catalog.data.pageSize)}
-            </span>
-            <button
-              className="button button-secondary"
-              disabled={page * catalog.data.pageSize >= catalog.data.total}
-              onClick={() => setPage(page + 1)}
-            >
-              Next
-            </button>
-          </nav>
-        )}
-        <p className="demo-note">
-          Illustrative products, configurations and prices for a student
-          project. Checkout arrives in the next sprint.
-        </p>
-      </section>
-    </div>
-  );
-}
-
 function ProductDetail() {
   const { id } = useParams();
   const { data, error, loading } = useRemote(`/products/${id}`);
@@ -433,11 +205,12 @@ function ProductDetail() {
           <p className="warranty">
             <span aria-hidden="true">✓</span> {product.warrantyText}
           </p>
+          <AddToCart product={product} />
           <div className="detail-next">
-            <strong>Getting to know your next setup?</strong>
+            <strong>Ready for your next setup?</strong>
             <p>
-              Explore the specifications below. Cart and checkout are coming in
-              Sprint 2.
+              Add it to your cart, then review delivery details and pay cash on
+              delivery.
             </p>
           </div>
           <small className="muted">
@@ -723,10 +496,12 @@ function Admin() {
         </div>
       )}
       <Message>
-        Catalog editing, inventory management, and order processing will be
-        added in later sprints.
+        Manage products, specifications, images and stock in the catalog editor.
+        Order processing arrives in Sprint 3.
       </Message>
-      <Link to="/">Explore the storefront ↗</Link>
+      <Link className="button" to="/admin/products">
+        Manage catalog ↗
+      </Link>
     </div>
   );
 }
@@ -741,9 +516,14 @@ export default function App() {
         <Route path="register" element={<AuthPage key="register" register />} />
         <Route element={<Protected />}>
           <Route path="account" element={<Account />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="orders/:id" element={<OrderReceipt />} />
         </Route>
         <Route element={<Protected admin />}>
           <Route path="admin" element={<Admin />} />
+          <Route path="admin/products" element={<AdminCatalog />} />
         </Route>
         <Route
           path="*"

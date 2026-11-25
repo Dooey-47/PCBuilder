@@ -23,15 +23,18 @@ enum Role {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
   passwordHash String
   name         String
   phone        String?
-  role         Role     @default(CUSTOMER)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         Role       @default(CUSTOMER)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  cartVersion  Int        @default(0)
+  cartItems    CartItem[]
+  orders       Order[]
 }
 
 model Brand {
@@ -57,6 +60,10 @@ model Product {
   images       ProductImage[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  version      Int            @default(0)
+  useCases     String[]       @default([])
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
 
   @@index([categoryId, active])
   @@index([brandId])
@@ -91,4 +98,72 @@ model Session {
 
   @@index([expire])
   @@map("session")
+}
+
+model CartItem {
+  userId    Int
+  productId Int
+  quantity  Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@id([userId, productId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PaymentMethod {
+  COD
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  reference      String        @unique
+  userId         Int
+  user           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status         OrderStatus   @default(PENDING)
+  paymentStatus  PaymentStatus @default(PENDING)
+  paymentMethod  PaymentMethod @default(COD)
+  recipientName  String
+  phone          String
+  address        String
+  subtotal       Decimal       @db.Decimal(20, 0)
+  shippingFee    Decimal       @db.Decimal(20, 0)
+  total          Decimal       @db.Decimal(20, 0)
+  idempotencyKey String
+  requestHash    String
+  createdAt      DateTime      @default(now())
+  items          OrderItem[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     String
+  productId   Int
+  productName String
+  sku         String
+  unitPrice   Decimal @db.Decimal(14, 0)
+  quantity    Int
+  lineTotal   Decimal @db.Decimal(20, 0)
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
 }

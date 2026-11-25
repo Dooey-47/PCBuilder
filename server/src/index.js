@@ -17,6 +17,7 @@ const app = createApp({
   sessionStore: store,
   sessionSecret: process.env.SESSION_SECRET,
   production: process.env.NODE_ENV === "production",
+  shippingFee: process.env.SHIPPING_FEE_VND ?? "30000",
 });
 const port = Number(process.env.PORT ?? 3000);
 
