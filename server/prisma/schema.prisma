@@ -123,10 +123,12 @@ enum PaymentStatus {
   PENDING
   PAID
   FAILED
+  REFUNDED
 }
 
 enum PaymentMethod {
   COD
+  SIMULATED
 }
 
 model Order {
@@ -147,9 +149,13 @@ model Order {
   requestHash    String
   createdAt      DateTime      @default(now())
   items          OrderItem[]
+  version        Int           @default(0)
+  updatedAt      DateTime      @updatedAt
+  events         OrderEvent[]
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model OrderItem {
@@ -166,4 +172,18 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+// Snapshot history; no customer/admin credentials are exposed through an order.
+model OrderEvent {
+  id            Int           @id @default(autoincrement())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  action        String
+  actorRole     Role?
+  status        OrderStatus
+  paymentStatus PaymentStatus
+  createdAt     DateTime      @default(now())
+
+  @@index([orderId, id])
 }

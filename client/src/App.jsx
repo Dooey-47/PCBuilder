@@ -16,12 +16,8 @@ import useRemote from "./useRemote.js";
 import { money } from "./format.js";
 import Catalog from "./Catalog.jsx";
 import { AddToCart } from "./shop-ui.jsx";
-import {
-  CartPage,
-  CheckoutPage,
-  OrderReceipt,
-  OrdersPage,
-} from "./ShopPages.jsx";
+import { CartPage, CheckoutPage } from "./ShopPages.jsx";
+import { OrderReceipt, OrdersPage } from "./OrderPages.jsx";
 import AdminCatalog from "./AdminCatalog.jsx";
 
 function Message({ children, error = false }) {
@@ -497,10 +493,16 @@ function Admin() {
       )}
       <Message>
         Manage products, specifications, images and stock in the catalog editor.
-        Order processing arrives in Sprint 3.
+        Process customer orders in the order queue.
       </Message>
       <Link className="button" to="/admin/products">
         Manage catalog ↗
+      </Link>
+      <Link
+        className="button button-secondary admin-orders-link"
+        to="/admin/orders"
+      >
+        Manage orders ↗
       </Link>
     </div>
   );
@@ -524,6 +526,8 @@ export default function App() {
         <Route element={<Protected admin />}>
           <Route path="admin" element={<Admin />} />
           <Route path="admin/products" element={<AdminCatalog />} />
+          <Route path="admin/orders" element={<OrdersPage admin />} />
+          <Route path="admin/orders/:id" element={<OrderReceipt admin />} />
         </Route>
         <Route
           path="*"

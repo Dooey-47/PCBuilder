@@ -1,14 +1,8 @@
 import { useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "./api.js";
 import { useAuth } from "./auth-context.js";
 import { useShop } from "./shop-context.js";
-import useRemote from "./useRemote.js";
 import { money } from "./format.js";
 import { Notice, Totals } from "./shop-ui.jsx";
 
@@ -176,6 +170,7 @@ export function CheckoutPage() {
   const storageKey = `pcbuilder-checkout-${user.id}`;
   const [attempt, setAttempt] = useState(() => storedAttempt(storageKey));
   const [pending, setPending] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("COD");
   const [error, setError] = useState(null);
   async function send(value) {
     setPending(true);
@@ -207,7 +202,7 @@ export function CheckoutPage() {
     const fields = Object.fromEntries(new FormData(event.currentTarget));
     const value = {
       key: crypto.randomUUID(),
-      body: { ...fields, paymentMethod: "COD", cartToken: shop.cart.token },
+      body: { ...fields, cartToken: shop.cart.token },
     };
     storeAttempt(storageKey, value);
     setAttempt(value);
@@ -313,16 +308,37 @@ export function CheckoutPage() {
                   )}
                 </div>
                 <h3 className="small-heading">Payment method</h3>
-                <p className="cod-option">◉ Cash on delivery (COD)</p>
+                <div className="field">
+                  <label htmlFor="checkout-payment">
+                    Choose payment method
+                  </label>
+                  <select
+                    id="checkout-payment"
+                    name="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(event) => setPaymentMethod(event.target.value)}
+                  >
+                    <option value="COD">Cash on delivery (COD)</option>
+                    <option value="SIMULATED">
+                      Simulated payment (demo only)
+                    </option>
+                  </select>
+                </div>
                 <p className="form-hint">
-                  Pay on delivery. No payment gateway or card details are
-                  involved.
+                  COD is paid on delivery. For a simulated payment, choose a
+                  demo success or failure on the order page. No real money or
+                  card details are involved.
                 </p>
                 <button
                   className="button button-full"
                   disabled={!shop.cart.canCheckout}
                 >
-                  {pending ? "Placing order…" : "Confirm COD order"} ↗
+                  {pending
+                    ? "Placing order…"
+                    : paymentMethod === "COD"
+                      ? "Confirm COD order"
+                      : "Place simulated-payment order"}{" "}
+                  ↗
                 </button>
               </fieldset>
             </form>
@@ -352,144 +368,6 @@ export function CheckoutPage() {
             </p>
           </aside>
         </div>
-      )}
-    </div>
-  );
-}
-
-export function OrderReceipt() {
-  const { id } = useParams();
-  const { data, error, loading, refresh } = useRemote(`/orders/${id}`);
-  return (
-    <div className="shell page-section">
-      <p className="eyebrow">YOUR ORDER DETAILS</p>
-      {loading ? (
-        <Notice>Loading order…</Notice>
-      ) : error ? (
-        <Notice error>
-          {error.message}{" "}
-          <button className="text-button" onClick={refresh}>
-            Retry
-          </button>
-        </Notice>
-      ) : (
-        <>
-          <h1 className="page-title">Order received.</h1>
-          <p className="muted">
-            Thank you, {data.order.recipientName}. Your order is waiting for
-            confirmation.
-          </p>
-          <div className="checkout-grid">
-            <section>
-              <div className="receipt-info">
-                <h2>{data.order.reference}</h2>
-                <p>
-                  Order: <strong>{data.order.status}</strong> · Payment:{" "}
-                  <strong>{data.order.paymentStatus}</strong> (COD)
-                </p>
-                <p>{new Date(data.order.createdAt).toLocaleString()}</p>
-                <h3 className="small-heading">Delivery details</h3>
-                <p>
-                  {data.order.recipientName}
-                  <br />
-                  {data.order.phone}
-                  <br />
-                  {data.order.address}
-                </p>
-              </div>
-              <ul className="receipt-items">
-                {data.order.items.map((item) => (
-                  <li key={item.id}>
-                    <div>
-                      <strong>{item.productName}</strong>
-                      <small>
-                        {item.sku} · {money(item.unitPrice)} × {item.quantity}
-                      </small>
-                    </div>
-                    <strong>{money(item.lineTotal)}</strong>
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <aside className="summary-card">
-              <h2>Order total</h2>
-              <Totals data={data.order} />
-              <Link to="/" className="button button-full">
-                Continue browsing ↗
-              </Link>
-              <Link className="back-link" to="/orders">
-                View your orders
-              </Link>
-            </aside>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-export function OrdersPage() {
-  const [params, setParams] = useSearchParams();
-  const page = Number(params.get("page") ?? 1);
-  const { data, error, loading } = useRemote(`/orders?page=${page}`);
-  return (
-    <div className="shell page-section">
-      <p className="eyebrow">YOUR PURCHASES</p>
-      <h1 className="page-title">Your orders.</h1>
-      {loading ? (
-        <Notice>Loading orders…</Notice>
-      ) : error ? (
-        <Notice error>{error.message}</Notice>
-      ) : !data.orders.length ? (
-        <Notice>
-          No orders on this page. <Link to="/">Explore products</Link>
-        </Notice>
-      ) : (
-        <>
-          <div className="table-scroll">
-            <table className="management-table">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Placed</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      <Link to={`/orders/${order.id}`}>{order.reference}</Link>
-                    </td>
-                    <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                    <td>{order.status}</td>
-                    <td>{money(order.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {data.total > data.pageSize && (
-            <nav className="pagination-row">
-              <button
-                className="button button-secondary"
-                disabled={page <= 1}
-                onClick={() => setParams({ page: String(page - 1) })}
-              >
-                Previous
-              </button>
-              <span>Page {page}</span>
-              <button
-                className="button button-secondary"
-                disabled={page * data.pageSize >= data.total}
-                onClick={() => setParams({ page: String(page + 1) })}
-              >
-                Next
-              </button>
-            </nav>
-          )}
-        </>
       )}
     </div>
   );

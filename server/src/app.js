@@ -6,6 +6,7 @@ import { z } from "zod";
 import { resolve } from "node:path";
 import { registerCatalog } from "./catalog.js";
 import { httpError } from "./http-errors.js";
+import { registerOrderManagement } from "./order-management.js";
 import { registerCommerce } from "./commerce.js";
 import {
   registerAdminCatalog,
@@ -229,6 +230,7 @@ export function createApp({
     res.json({ products, customers });
   });
   registerCommerce(app, { prisma, requireUser, shippingFee });
+  registerOrderManagement(app, { prisma, requireUser });
   registerAdminCatalog(app, { prisma, requireUser, uploadDir });
   app.use("/api", (_req, res) =>
     res.status(404).json({ message: "Endpoint not found." }),
@@ -239,12 +241,10 @@ export function createApp({
         .status(409)
         .json({ message: "A record with this SKU or name already exists." });
     if (error.code === "P2003")
-      return res
-        .status(409)
-        .json({
-          message:
-            "This record is used by a product or order and cannot be deleted.",
-        });
+      return res.status(409).json({
+        message:
+          "This record is used by a product or order and cannot be deleted.",
+      });
     if (error.code === "P2025")
       return res.status(404).json({ message: "Record not found." });
     if (error.code === "LIMIT_FILE_SIZE")
@@ -260,13 +260,11 @@ export function createApp({
     if (error.type === "entity.too.large")
       return res.status(413).json({ message: "Request is too large." });
     if (error.status >= 400 && error.status < 500)
-      return res
-        .status(error.status)
-        .json({
-          message: error.message,
-          fields: error.fields,
-          code: error.code,
-        });
+      return res.status(error.status).json({
+        message: error.message,
+        fields: error.fields,
+        code: error.code,
+      });
     console.error(error);
     res.status(503).json({
       message: "The service is temporarily unavailable. Please try again.",

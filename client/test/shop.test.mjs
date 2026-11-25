@@ -106,6 +106,22 @@ test("shop pages handle loading, unavailable items and checkout recovery", async
         assert.match(html, /Full delivery address/);
         assert.match(html, /130\.000/);
         assert.match(html, /Confirm COD order/);
+        assert.match(html, /Simulated payment/);
+      },
+    );
+    await t.test(
+      "customer order list and detail render safely while loading",
+      () => {
+        assert.match(render("/orders"), /Loading orders/);
+        assert.match(render("/orders/example-order"), /Loading order/);
+      },
+    );
+    await t.test(
+      "customers cannot render administrator order processing",
+      () => {
+        const html = render("/admin/orders");
+        assert.doesNotMatch(html, /Manage orders/);
+        assert.doesNotMatch(html, /Confirm order/);
       },
     );
     await t.test(

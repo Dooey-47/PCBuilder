@@ -12,7 +12,7 @@ import { createApp } from "../src/app.js";
 import { hashPassword } from "../src/passwords.js";
 import { seedCatalog } from "../prisma/seed-data.js";
 
-export async function fixture(t, { beforeLatest } = {}) {
+export async function fixture(t, { beforeLatest, beforeSprint3 } = {}) {
   const schema = `sprint2_${randomUUID().replaceAll("-", "")}`;
   const connectionString = process.env.TEST_DATABASE_URL;
   const setup = new pg.Pool({ connectionString, max: 1 });
@@ -48,6 +48,8 @@ export async function fixture(t, { beforeLatest } = {}) {
       .sort((a, b) => a.name.localeCompare(b.name))) {
       if (entry.name === "20261125090000_sprint2_commerce" && beforeLatest)
         await beforeLatest(client);
+      if (entry.name === "20261125140000_sprint3_orders" && beforeSprint3)
+        await beforeSprint3(client);
       await client.query(
         await readFile(new URL(`${entry.name}/migration.sql`, root), "utf8"),
       );

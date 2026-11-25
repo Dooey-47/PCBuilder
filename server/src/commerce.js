@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { validate, httpError } from "./http-errors.js";
+import { orderSelect } from "./order-data.js";
 import { positiveId } from "./catalog.js";
 
 const sha = (value) =>
@@ -18,37 +19,10 @@ const shipping = z
       .trim()
       .min(10, "Enter a complete delivery address.")
       .max(500),
-    paymentMethod: z.literal("COD"),
+    paymentMethod: z.enum(["COD", "SIMULATED"]),
     cartToken: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
-const orderSelect = {
-  id: true,
-  reference: true,
-  status: true,
-  paymentMethod: true,
-  paymentStatus: true,
-  recipientName: true,
-  phone: true,
-  address: true,
-  subtotal: true,
-  shippingFee: true,
-  total: true,
-  createdAt: true,
-  items: {
-    orderBy: { id: "asc" },
-    select: {
-      id: true,
-      productId: true,
-      productName: true,
-      sku: true,
-      unitPrice: true,
-      quantity: true,
-      lineTotal: true,
-    },
-  },
-};
-
 // All cart writes and checkout serialize on this customer's row, across all backend processes.
 export async function lockCustomer(tx, userId) {
   await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
@@ -251,7 +225,15 @@ export function registerCommerce(
             recipientName: input.recipientName,
             phone: input.phone,
             address: input.address,
-            paymentMethod: "COD",
+            paymentMethod: input.paymentMethod,
+            events: {
+              create: {
+                action: "PLACED",
+                actorRole: req.user.role,
+                status: "PENDING",
+                paymentStatus: "PENDING",
+              },
+            },
             subtotal: cart.subtotal,
             shippingFee: cart.shippingFee,
             total: cart.total,
@@ -281,39 +263,6 @@ export function registerCommerce(
       { timeout: 15000, maxWait: 10000 },
     );
     res.status(result.replayed ? 200 : 201).json(result);
-  });
-  router.get("/orders", async (req, res) => {
-    const { page } = validate(
-      z
-        .object({ page: z.coerce.number().int().min(1).max(10000).default(1) })
-        .strict(),
-      req.query,
-    );
-    const [orders, total] = await prisma.$transaction([
-      prisma.order.findMany({
-        where: { userId: req.user.id },
-        select: {
-          id: true,
-          reference: true,
-          total: true,
-          status: true,
-          createdAt: true,
-        },
-        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-        skip: (page - 1) * 10,
-        take: 10,
-      }),
-      prisma.order.count({ where: { userId: req.user.id } }),
-    ]);
-    res.json({ orders, total, page, pageSize: 10 });
-  });
-  router.get("/orders/:id", async (req, res) => {
-    const order = await prisma.order.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
-      select: orderSelect,
-    });
-    if (!order) throw httpError(404, "Order not found.");
-    res.json({ order });
   });
   app.use("/api", router);
 }

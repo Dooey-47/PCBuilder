@@ -1,6 +1,6 @@
 # PCBuilder
 
-Website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 7.
+Bài tập xây dựng website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 7.
 
 ## Yêu cầu
 
@@ -8,6 +8,7 @@ Website bán máy tính bằng React, Bootstrap, Express, PostgreSQL và Prisma 
 - PostgreSQL đã được cài đặt và đang chạy trên máy
 - Git
 
+Mỗi thành viên chạy frontend, backend và cơ sở dữ liệu riêng trên máy của mình.
 
 ## Thiết lập lần đầu
 
@@ -71,17 +72,17 @@ Trang chủ sẽ hiển thị danh sách sản phẩm. Mở chi tiết, đăng k
 
 ## Sau khi pull thay đổi
 
-Chạy `npm ci` trong từng thư mục có thay đổi về thư viện phụ thuộc. Trong thư mục `server`, chạy:
+Chạy `npm ci` trong từng thư mục có thay đổi về thư viện phụ thuộc. Trong thư mục `server`, áp dụng các migration đã commit:
 
 ```sh
-npx prisma migrate dev
+npx prisma migrate deploy
 npx prisma generate
 npx prisma db seed
 ```
 
 Khi sửa schema, tạo migration có tên mô tả bằng `npx prisma migrate dev --name describe_change`, tạo lại Prisma Client và commit cả `prisma/schema.prisma` lẫn `prisma/migrations/`.
 
-Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm danh mục và sáu sản phẩm minh họa, không tạo trùng hoặc ghi đè các bản ghi đã có. Chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
+Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm danh mục và sáu sản phẩm minh họa, không tạo trùng hoặc ghi đè các bản ghi đã có. Script không tự đồng bộ thay đổi giữa cơ sở dữ liệu của các thành viên; ID có thể khác nhau. Chạy seed sau khi thiết lập hoặc sau khi pull thay đổi của script. Không commit tệp `.env` chứa thông tin thật hoặc thông tin đăng nhập.
 
 ## Sprint 1
 
@@ -95,7 +96,7 @@ Migration đồng bộ cấu trúc cơ sở dữ liệu. Script seed thêm năm 
 Kiểm tra frontend: chạy `npm test`, `npm run lint` và `npm run build` trong `client`.
 Kiểm thử backend: chạy `npm test` trong `server`. Kiểm thử mật khẩu luôn chạy; kiểm thử tích hợp cần đặt `TEST_DATABASE_URL` trong `server/.env`. Tài khoản cơ sở dữ liệu cần quyền tạo schema. Kiểm thử tích hợp tạo và xóa schema tạm riêng, không sửa các bảng đã có.
 
-Xem [SPRINT1.md](SPRINT1.md) cho phần nền tảng và [SPRINT2.md](SPRINT2.md) cho bản cập nhật mới nhất.
+Xem [SPRINT1.md](SPRINT1.md), [SPRINT2.md](SPRINT2.md) và bản cập nhật mới nhất [SPRINT3.md](SPRINT3.md).
 
 ## Sprint 2
 
@@ -108,4 +109,14 @@ Xem [SPRINT1.md](SPRINT1.md) cho phần nền tảng và [SPRINT2.md](SPRINT2.md
 
 Biến `SHIPPING_FEE_VND` trong `server/.env` đặt phí giao hàng cố định, mặc định 30000 VND. Ảnh tải lên lưu ở `server/uploads/` và không được đưa vào Git; cũng có thể dùng URL ảnh HTTPS. Ảnh và dữ liệu trên máy từng thành viên không tự đồng bộ. Khi mất phản hồi đặt hàng, dùng nút Retry this checkout để lấy lại kết quả với cùng khóa, kể cả sau khi tải lại trang.
 
-API mới nằm trong `server/src/catalog.js`, `admin-catalog.js` và `commerce.js`, được đăng ký tại `app.js`. Hủy đơn, mô phỏng thanh toán và xử lý giao hàng thuộc Sprint 3. Xem [SPRINT2.md](SPRINT2.md) để biết chi tiết và tiêu chí kiểm tra.
+API mới nằm trong `server/src/catalog.js`, `admin-catalog.js` và `commerce.js`, được đăng ký tại `app.js`. Sprint 3 bổ sung xử lý đơn trong `order-management.js`. Xem [SPRINT2.md](SPRINT2.md) để biết chi tiết và tiêu chí kiểm tra.
+
+## Sprint 3
+
+- Khách xem/lọc lịch sử, chi tiết, tiến trình và hoạt động của đơn; chỉ hủy được đơn Pending của mình.
+- Admin có danh sách đơn và xử lý lần lượt Pending → Confirmed → Shipping → Delivered.
+- Hủy Pending hoàn tồn đúng một lần trong transaction, kể cả khi gửi lại yêu cầu.
+- Mô phỏng thanh toán thành công/thất bại và thử lại. Hủy đơn Pending đã thanh toán mô phỏng sẽ ghi Refunded; không có giao dịch tiền thật.
+- Thanh toán COD tách riêng: sau khi giao, Admin phải xác nhận đã thu tiền để chuyển thành Paid.
+
+Cập nhật từ Sprint 2: dừng backend, chép các tệp thay đổi đúng đường dẫn, vào `server` chạy `npx prisma migrate deploy`, rồi `npx prisma generate`; khởi động lại cả hai dev server. Không cần cài thêm thư viện, chạy seed hay reset cơ sở dữ liệu. Giữ `.env`, ảnh tải lên và tài khoản Admin hiện có. Chi tiết API, luồng dữ liệu, quy tắc thanh toán và kiểm thử nằm trong [SPRINT3.md](SPRINT3.md). Triển khai demo dùng chung và nghiệm thu với các thành viên vẫn chưa thực hiện.
