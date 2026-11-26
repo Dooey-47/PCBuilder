@@ -25,7 +25,7 @@ export function AddToCart({ product }) {
     setError("");
     try {
       await shop.add(product.id);
-      setMessage("Added to your cart.");
+      setMessage("Đã thêm vào giỏ hàng.");
     } catch (err) {
       setError(err.message);
     }
@@ -38,10 +38,10 @@ export function AddToCart({ product }) {
         onClick={add}
       >
         {!product.stock
-          ? "Out of stock"
+          ? "Hết hàng"
           : user
-            ? "Add to cart"
-            : "Sign in to add"}
+            ? "Thêm vào giỏ hàng"
+            : "Đăng nhập để thêm"}
         <span aria-hidden="true">+</span>
       </button>
       {message && <small role="status">{message}</small>}
@@ -57,15 +57,15 @@ export function Totals({ data }) {
   return (
     <dl className="order-totals">
       <div>
-        <dt>Subtotal</dt>
+        <dt>Tạm tính</dt>
         <dd>{money(data.subtotal)}</dd>
       </div>
       <div>
-        <dt>Delivery</dt>
+        <dt>Phí giao hàng</dt>
         <dd>{money(data.shippingFee)}</dd>
       </div>
       <div className="grand-total">
-        <dt>Total</dt>
+        <dt>Tổng cộng</dt>
         <dd>{money(data.total)}</dd>
       </div>
     </dl>

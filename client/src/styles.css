@@ -534,12 +534,6 @@ p {
 .stock-empty {
   color: #87919e;
 }
-.demo-note {
-  text-align: center;
-  font-size: 10px;
-  color: var(--muted);
-  margin: 28px 0 8px;
-}
 .pagination-row {
   display: flex;
   align-items: center;

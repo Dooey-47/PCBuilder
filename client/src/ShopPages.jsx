@@ -4,6 +4,7 @@ import { api } from "./api.js";
 import { useAuth } from "./auth-context.js";
 import { useShop } from "./shop-context.js";
 import { money } from "./format.js";
+import { viText } from "./vi.js";
 import { Notice, Totals } from "./shop-ui.jsx";
 
 function CartRow({ item, mutate, pending, onError }) {
@@ -32,7 +33,7 @@ function CartRow({ item, mutate, pending, onError }) {
       {item.image && (
         <img
           src={item.image.url}
-          alt={item.image.alt}
+          alt={viText(item.image.alt)}
           width="100"
           height="80"
         />
@@ -45,13 +46,13 @@ function CartRow({ item, mutate, pending, onError }) {
             item.name
           )}
         </h2>
-        <p>{money(item.unitPrice)} each</p>
+        <p>{money(item.unitPrice)} / sản phẩm</p>
         <small className={item.available ? "stock" : "field-error"}>
           {!item.active
-            ? "No longer for sale"
+            ? "Không còn bán"
             : item.available
-              ? `${item.stock} in stock`
-              : `Only ${item.stock} available; reduce the quantity or remove this item.`}
+              ? `${item.stock} còn hàng`
+              : `Chỉ còn ${item.stock} sản phẩm; hãy giảm số lượng hoặc xóa sản phẩm này.`}
         </small>
       </div>
       <form
@@ -59,7 +60,7 @@ function CartRow({ item, mutate, pending, onError }) {
         className="quantity-form"
         key={`${item.productId}-${item.quantity}`}
       >
-        <label htmlFor={`quantity-${item.productId}`}>Quantity</label>
+        <label htmlFor={`quantity-${item.productId}`}>Số lượng</label>
         <input
           id={`quantity-${item.productId}`}
           name="quantity"
@@ -72,13 +73,13 @@ function CartRow({ item, mutate, pending, onError }) {
           disabled={pending}
         />
         <button className="text-button" disabled={pending}>
-          Update
+          Cập nhật
         </button>
       </form>
       <div className="cart-item-total">
         <strong>{money(item.lineTotal)}</strong>
         <button className="text-button" disabled={pending} onClick={remove}>
-          Remove
+          Xóa
         </button>
       </div>
     </article>
@@ -89,10 +90,10 @@ export function CartPage() {
   const [message, setMessage] = useState("");
   return (
     <div className="shell page-section">
-      <p className="eyebrow">A LITTLE CLOSER TO YOUR NEXT SETUP</p>
-      <h1 className="page-title">Your cart.</h1>
+      <p className="eyebrow">SẮP HOÀN THÀNH LỰA CHỌN</p>
+      <h1 className="page-title">Giỏ hàng của bạn.</h1>
       {loading ? (
-        <Notice>Loading your cart…</Notice>
+        <Notice>Đang tải giỏ hàng…</Notice>
       ) : error ? (
         <Notice error>
           {error.message}{" "}
@@ -100,22 +101,21 @@ export function CartPage() {
             className="text-button"
             onClick={() => refresh().catch((err) => setMessage(err.message))}
           >
-            Retry
+            Thử lại
           </button>
         </Notice>
       ) : !cart?.items.length ? (
         <Notice>
-          Your cart is empty. <Link to="/">Explore products ↗</Link>
+          Giỏ hàng của bạn đang trống. <Link to="/">Khám phá sản phẩm ↗</Link>
         </Notice>
       ) : (
         <>
           <p className="muted">
-            Prices and availability are checked again when you confirm. Items
-            are not reserved.
+            Giá và tình trạng còn hàng sẽ được kiểm tra lại khi bạn xác nhận. Sản phẩm trong giỏ chưa được giữ trước.
           </p>
           {message && <Notice error>{message}</Notice>}
           <div className="checkout-grid">
-            <section aria-label="Cart products">
+            <section aria-label="Sản phẩm trong giỏ">
               {cart.items.map((item) => (
                 <CartRow
                   key={item.productId}
@@ -127,17 +127,17 @@ export function CartPage() {
               ))}
             </section>
             <aside className="summary-card">
-              <h2>Order summary</h2>
+              <h2>Tóm tắt đơn hàng</h2>
               <Totals data={cart} />
               {cart.canCheckout ? (
                 <Link className="button button-full" to="/checkout">
-                  Continue to checkout ↗
+                  Tiếp tục thanh toán ↗
                 </Link>
               ) : (
-                <Notice error>Update unavailable items before checkout.</Notice>
+                <Notice error>Hãy cập nhật sản phẩm không còn bán trước khi thanh toán.</Notice>
               )}
               <Link className="back-link" to="/">
-                ← Continue browsing
+                ← Tiếp tục mua sắm
               </Link>
             </aside>
           </div>
@@ -211,52 +211,50 @@ export function CheckoutPage() {
   return (
     <div className="shell page-section">
       <nav className="breadcrumbs">
-        <Link to="/cart">Cart</Link>
+        <Link to="/cart">Giỏ hàng</Link>
         <span>/</span>
-        <span>Checkout</span>
+        <span>Thanh toán</span>
       </nav>
-      <p className="eyebrow">THE FINAL DETAILS</p>
-      <h1 className="page-title">Make it yours.</h1>
+      <p className="eyebrow">HOÀN TẤT THÔNG TIN</p>
+      <h1 className="page-title">Hoàn tất đơn hàng.</h1>
       {error && <Notice error>{error.message}</Notice>}
       {attempt && (
         <Notice>
-          Your last checkout needs confirmation. Retry the same request to
-          recover its order safely; it will not create a second order.
+          Lần đặt hàng trước chưa có kết quả rõ ràng. Hãy gửi lại cùng yêu cầu để lấy kết quả mà không tạo đơn trùng.
           <button
             className="button button-small retry-checkout"
             disabled={pending}
             onClick={() => send(attempt)}
           >
-            {pending ? "Confirming…" : "Retry this checkout"}
+            {pending ? "Đang xác nhận…" : "Thử lại lần đặt hàng này"}
           </button>
         </Notice>
       )}
       {shop.loading ? (
-        <Notice>Loading checkout…</Notice>
+        <Notice>Đang tải trang thanh toán…</Notice>
       ) : shop.error ? (
         <Notice error>{shop.error.message}</Notice>
       ) : !shop.cart?.items.length ? (
         <Notice>
           {attempt ? (
-            "Your cart may have been cleared by the previous checkout. Use the retry button above to retrieve its order."
+            "Giỏ hàng có thể đã được xóa sau lần đặt trước. Hãy dùng nút thử lại phía trên để lấy thông tin đơn hàng."
           ) : (
             <>
-              Your cart is empty. <Link to="/">Browse products</Link>
+              Giỏ hàng của bạn đang trống. <Link to="/">Xem sản phẩm</Link>
             </>
           )}
         </Notice>
       ) : (
         <div className="checkout-grid">
           <section className="form-card checkout-form">
-            <h2>Delivery information</h2>
+            <h2>Thông tin giao hàng</h2>
             <p className="muted">
-              Required fields are marked *. Your delivery details are saved with
-              this order.
+              Các trường bắt buộc được đánh dấu *. Thông tin giao hàng sẽ được lưu cùng đơn hàng.
             </p>
             <form onSubmit={submit}>
               <fieldset disabled={pending || Boolean(attempt)}>
                 <div className="field">
-                  <label htmlFor="recipientName">Recipient name *</label>
+                  <label htmlFor="recipientName">Tên người nhận *</label>
                   <input
                     id="recipientName"
                     name="recipientName"
@@ -273,7 +271,7 @@ export function CheckoutPage() {
                   )}
                 </div>
                 <div className="field">
-                  <label htmlFor="delivery-phone">Phone number *</label>
+                  <label htmlFor="delivery-phone">Số điện thoại *</label>
                   <input
                     id="delivery-phone"
                     name="phone"
@@ -291,7 +289,7 @@ export function CheckoutPage() {
                   )}
                 </div>
                 <div className="field">
-                  <label htmlFor="address">Full delivery address *</label>
+                  <label htmlFor="address">Địa chỉ giao hàng đầy đủ *</label>
                   <textarea
                     id="address"
                     name="address"
@@ -307,10 +305,10 @@ export function CheckoutPage() {
                     </small>
                   )}
                 </div>
-                <h3 className="small-heading">Payment method</h3>
+                <h3 className="small-heading">Phương thức thanh toán</h3>
                 <div className="field">
                   <label htmlFor="checkout-payment">
-                    Choose payment method
+                    Chọn phương thức thanh toán
                   </label>
                   <select
                     id="checkout-payment"
@@ -318,33 +316,31 @@ export function CheckoutPage() {
                     value={paymentMethod}
                     onChange={(event) => setPaymentMethod(event.target.value)}
                   >
-                    <option value="COD">Cash on delivery (COD)</option>
+                    <option value="COD">Thanh toán khi nhận hàng (COD)</option>
                     <option value="SIMULATED">
-                      Simulated payment (demo only)
+                      Thanh toán mô phỏng
                     </option>
                   </select>
                 </div>
                 <p className="form-hint">
-                  COD is paid on delivery. For a simulated payment, choose a
-                  demo success or failure on the order page. No real money or
-                  card details are involved.
+                  Với COD, bạn thanh toán khi nhận hàng. Với thanh toán mô phỏng, chọn kết quả thành công hoặc thất bại ở trang đơn hàng. Không có giao dịch tiền thật.
                 </p>
                 <button
                   className="button button-full"
                   disabled={!shop.cart.canCheckout}
                 >
                   {pending
-                    ? "Placing order…"
+                    ? "Đang đặt hàng…"
                     : paymentMethod === "COD"
-                      ? "Confirm COD order"
-                      : "Place simulated-payment order"}{" "}
+                      ? "Xác nhận đơn COD"
+                      : "Đặt đơn thanh toán mô phỏng"}{" "}
                   ↗
                 </button>
               </fieldset>
             </form>
           </section>
           <aside className="summary-card">
-            <h2>Your order</h2>
+            <h2>Đơn hàng của bạn</h2>
             <ul className="summary-items">
               {shop.cart.items.map((item) => (
                 <li key={item.productId}>
@@ -358,13 +354,12 @@ export function CheckoutPage() {
             <Totals data={shop.cart} />
             {!shop.cart.canCheckout && (
               <Notice error>
-                Some items are unavailable.{" "}
-                <Link to="/cart">Review your cart</Link>
+                Một số sản phẩm không còn bán.{" "}
+                <Link to="/cart">Kiểm tra giỏ hàng</Link>
               </Notice>
             )}
             <p className="form-hint">
-              Check the latest totals before confirming. Changes to stock or
-              prices require another review.
+              Hãy kiểm tra tổng tiền trước khi xác nhận. Nếu giá hoặc tồn kho thay đổi, bạn cần kiểm tra lại.
             </p>
           </aside>
         </div>

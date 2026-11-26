@@ -1,18 +1,30 @@
+import { viError } from "./vi.js";
+
 let csrfToken;
 let initializing;
 
 async function request(path, options = {}) {
-  const response = await fetch(`/api${path}`, {
-    credentials: "same-origin",
-    ...options,
-  });
+  let response;
+  try {
+    response = await fetch(`/api${path}`, {
+      credentials: "same-origin",
+      ...options,
+    });
+  } catch {
+    throw new Error("Không thể kết nối với máy chủ. Vui lòng thử lại.");
+  }
   const data = await response
     .json()
     .catch(() => ({ message: "Unexpected response from the server." }));
   if (!response.ok) {
-    const error = new Error(data.message ?? "The request failed.");
+    const error = new Error(viError(data.message));
     error.status = response.status;
-    error.fields = data.fields ?? {};
+    error.fields = Object.fromEntries(
+      Object.entries(data.fields ?? {}).map(([key, messages]) => [
+        key,
+        messages.map(viError),
+      ]),
+    );
     error.code = data.code;
     throw error;
   }

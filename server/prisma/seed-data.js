@@ -6,7 +6,14 @@ export const categoryNames = [
   "Accessories",
 ];
 
-// Illustrative demo configurations and prices, not live retailer listings.
+// Initial catalog entries for a new database.
+const oldGpuDescription =
+  "An illustrative graphics card for your next desktop build. This demo item is out of stock so you can check the storefront's availability states.";
+const oldWarrantyText =
+  "24-month limited warranty. Demo terms for this exercise.";
+const warrantyText = "Bảo hành giới hạn 24 tháng.";
+const gpuDescription =
+  "Card đồ họa cho máy tính để bàn, phù hợp với nhu cầu chơi game và xử lý hình ảnh. Thiết kế hai quạt hỗ trợ tản nhiệt khi sử dụng.";
 const products = [
   {
     sku: "DEMO-LAP-01",
@@ -70,8 +77,7 @@ const products = [
     price: "8490000",
     stock: 0,
     image: "gpu",
-    description:
-      "An illustrative graphics card for your next desktop build. This demo item is out of stock so you can check the storefront's availability states.",
+    description: gpuDescription,
     specs: {
       Memory: "8 GB GDDR6",
       Interface: "PCIe 4.0",
@@ -144,8 +150,7 @@ export async function seedCatalog(db) {
             description: item.description,
             price: item.price,
             stock: item.stock,
-            warrantyText:
-              "24-month limited warranty. Demo terms for this exercise.",
+            warrantyText,
             categoryId: categories.get(item.category).id,
             brandId: brand.id,
             useCases:
@@ -156,6 +161,16 @@ export async function seedCatalog(db) {
                   : ["office", "creative"],
           },
         });
+        await tx.product.updateMany({
+          where: { id: product.id, warrantyText: oldWarrantyText },
+          data: { warrantyText },
+        });
+        if (item.sku === "DEMO-GPU-01") {
+          await tx.product.updateMany({
+            where: { id: product.id, description: oldGpuDescription },
+            data: { description: gpuDescription },
+          });
+        }
         for (const [name, value] of Object.entries(item.specs)) {
           await tx.productSpec.upsert({
             where: { productId_name: { productId: product.id, name } },
@@ -172,8 +187,16 @@ export async function seedCatalog(db) {
             productId: product.id,
             sortOrder: 0,
             url: `/images/${item.image}.svg`,
+            alt: `Ảnh sản phẩm ${item.name}`,
+          },
+        });
+        await tx.productImage.updateMany({
+          where: {
+            productId: product.id,
+            sortOrder: 0,
             alt: `${item.name} — illustrative product image`,
           },
+          data: { alt: `Ảnh sản phẩm ${item.name}` },
         });
       }
     },

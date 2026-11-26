@@ -40,7 +40,7 @@ try {
     );
   }
   console.log(
-    "Seed complete: 5 categories and 6 demo products. Existing records were preserved.",
+    "Seed complete: 5 categories and 6 products. Existing records were preserved.",
   );
 } catch (error) {
   console.error("Seeding failed:", error);

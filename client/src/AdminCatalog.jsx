@@ -4,6 +4,7 @@ import { api } from "./api.js";
 import useRemote from "./useRemote.js";
 import { Notice } from "./shop-ui.jsx";
 import { money } from "./format.js";
+import { viText, viUseCase } from "./vi.js";
 
 function Metadata({ kind, records, refresh }) {
   const [error, setError] = useState(""),
@@ -40,16 +41,16 @@ function Metadata({ kind, records, refresh }) {
   }
   return (
     <details className="metadata-panel">
-      <summary>Manage {kind}</summary>
+      <summary>Quản lý {kind === "brands" ? "thương hiệu" : "danh mục"}</summary>
       {error && <Notice error>{error}</Notice>}
       <form onSubmit={(event) => save(event)} className="metadata-row">
         <label className="visually-hidden" htmlFor={`new-${kind}`}>
-          New {kind === "brands" ? "brand" : "category"} name
+          Tên {kind === "brands" ? "thương hiệu" : "danh mục"} mới
         </label>
         <input
           id={`new-${kind}`}
           name="name"
-          placeholder={`New ${kind === "brands" ? "brand" : "category"}`}
+          placeholder={`${kind === "brands" ? "Thương hiệu" : "Danh mục"} mới`}
           required
           maxLength={80}
         />
@@ -87,7 +88,7 @@ function Metadata({ kind, records, refresh }) {
         </form>
       ))}
       <p className="form-hint">
-        Records referenced by products cannot be deleted.
+        Không thể xóa danh mục hoặc thương hiệu đang được sản phẩm sử dụng.
       </p>
     </details>
   );
@@ -110,7 +111,7 @@ function ProductForm({
     active: product?.active ?? true,
     categoryId: String(product?.categoryId ?? categories[0]?.id ?? ""),
     brandId: String(product?.brandId ?? brands[0]?.id ?? ""),
-    warrantyText: product?.warrantyText ?? "24-month limited warranty.",
+    warrantyText: product?.warrantyText ?? "Bảo hành giới hạn 24 tháng.",
     useCases: product?.useCases ?? [],
     specs:
       product?.specs.map((item) => `${item.name}: ${item.value}`).join("\n") ??
@@ -169,7 +170,7 @@ function ProductForm({
         .map((line) => {
           const separator = line.indexOf(":");
           if (separator < 1 || !line.slice(separator + 1).trim())
-            throw new Error("Use one specification per line: Name: Value.");
+            throw new Error("Mỗi dòng nhập một thông số theo dạng: Tên: Giá trị.");
           return {
             name: line.slice(0, separator).trim(),
             value: line.slice(separator + 1).trim(),
@@ -218,17 +219,16 @@ function ProductForm({
   );
   return (
     <section className="form-card product-editor">
-      <h2>{product ? "Edit product" : "Add product"}</h2>
+      <h2>{product ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
       <p className="muted">
-        Prices are whole VND. Stock changes are checked against the version you
-        opened.
+        Giá tính bằng VND nguyên. Thay đổi tồn kho được kiểm tra với phiên bản sản phẩm bạn đã mở.
       </p>
       {error && (
         <Notice error>
           {error.message}
           {error.status === 409 && product && (
             <button className="text-button reload-editor" onClick={reload}>
-              Reload latest product and discard this form
+              Tải lại sản phẩm mới nhất và bỏ nội dung đang sửa
             </button>
           )}
         </Notice>
@@ -236,22 +236,22 @@ function ProductForm({
       <form onSubmit={submit}>
         <fieldset disabled={pending || uploading}>
           <div className="editor-grid">
-            {field("name", "Product name", { maxLength: 150 })}
-            {field("sku", "Unique SKU", { maxLength: 60 })}
-            {field("price", "Price (VND)", {
+            {field("name", "Tên sản phẩm", { maxLength: 150 })}
+            {field("sku", "Mã SKU duy nhất", { maxLength: 60 })}
+            {field("price", "Giá (VND)", {
               type: "number",
               min: 0,
               max: 99999999999999,
               step: 1,
             })}
-            {field("stock", "Stock", {
+            {field("stock", "Tồn kho", {
               type: "number",
               min: 0,
               max: 2147483647,
               step: 1,
             })}
             <div className="field">
-              <label htmlFor="product-category">Category</label>
+              <label htmlFor="product-category">Danh mục</label>
               <select
                 id="product-category"
                 name="categoryId"
@@ -259,16 +259,16 @@ function ProductForm({
                 onChange={change}
                 required
               >
-                <option value="">Choose category</option>
+                <option value="">Chọn danh mục</option>
                 {categories.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name}
+                    {viText(item.name)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label htmlFor="product-brand">Brand</label>
+              <label htmlFor="product-brand">Thương hiệu</label>
               <select
                 id="product-brand"
                 name="brandId"
@@ -276,7 +276,7 @@ function ProductForm({
                 onChange={change}
                 required
               >
-                <option value="">Choose brand</option>
+                <option value="">Chọn thương hiệu</option>
                 {brands.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -286,7 +286,7 @@ function ProductForm({
             </div>
           </div>
           <div className="field">
-            <label htmlFor="product-description">Description</label>
+            <label htmlFor="product-description">Mô tả</label>
             <textarea
               id="product-description"
               name="description"
@@ -297,7 +297,7 @@ function ProductForm({
               maxLength={4000}
             />
           </div>
-          {field("warrantyText", "Warranty terms", { maxLength: 1000 })}
+          {field("warrantyText", "Điều khoản bảo hành", { maxLength: 1000 })}
           <label className="check-label">
             <input
               type="checkbox"
@@ -305,10 +305,10 @@ function ProductForm({
               checked={form.active}
               onChange={change}
             />{" "}
-            Published in storefront
+            Hiển thị trên cửa hàng
           </label>
           <fieldset className="use-cases">
-            <legend>Use cases</legend>
+            <legend>Nhu cầu sử dụng</legend>
             {["study", "office", "gaming", "creative"].map((value) => (
               <label key={value} className="check-label">
                 <input
@@ -316,13 +316,13 @@ function ProductForm({
                   checked={form.useCases.includes(value)}
                   onChange={() => tag(value)}
                 />{" "}
-                {value}
+                {viUseCase(value)}
               </label>
             ))}
           </fieldset>
           <div className="field">
             <label htmlFor="product-specs">
-              Specifications — one Name: Value per line
+              Thông số kỹ thuật — mỗi dòng một cặp Tên: Giá trị
             </label>
             <textarea
               id="product-specs"
@@ -330,19 +330,18 @@ function ProductForm({
               value={form.specs}
               onChange={change}
               rows={6}
-              placeholder={"Memory: 16 GB\nStorage: 512 GB SSD"}
+              placeholder={"Bộ nhớ: 16 GB\nLưu trữ: 512 GB SSD"}
             />
             {error?.fields?.specs && (
               <small className="field-error">{error.fields.specs[0]}</small>
             )}
             <small className="form-hint">
-              Common aliases are normalized: RAM → Memory, CPU → Processor, SSD
-              → Storage.
+              Tên gọi phổ biến được chuẩn hóa: RAM → Memory, CPU → Processor, SSD → Storage.
             </small>
           </div>
           <div className="field">
             <label htmlFor="product-images">
-              Image URLs — one per line, first image is primary
+              Đường dẫn ảnh — mỗi dòng một URL, ảnh đầu tiên là ảnh chính
             </label>
             <textarea
               id="product-images"
@@ -355,23 +354,22 @@ function ProductForm({
               <small className="field-error">{error.fields.images[0]}</small>
             )}
             <small className="form-hint">
-              Use HTTPS URLs, existing /images/ paths, or upload PNG/JPEG/WebP
-              files below. Maximum 8 images.
+              Dùng URL HTTPS, đường dẫn /images/ có sẵn hoặc tải tệp PNG/JPEG/WebP bên dưới. Tối đa 8 ảnh.
             </small>
           </div>
           <div className="field">
-            <label htmlFor="product-upload">Upload an image (max 2 MB)</label>
+            <label htmlFor="product-upload">Tải ảnh lên (tối đa 2 MB)</label>
             <input
               id="product-upload"
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={upload}
             />
-            {uploading && <small role="status">Uploading image…</small>}
+            {uploading && <small role="status">Đang tải ảnh lên…</small>}
           </div>
           <div className="editor-actions">
             <button className="button">
-              {pending ? "Saving…" : "Save product"}
+              {pending ? "Đang lưu…" : "Lưu sản phẩm"}
             </button>
             <button
               type="button"
@@ -391,13 +389,13 @@ function Editor({ id, categories, brands, onSaved, onClose }) {
   const data = useRemote(
     id === "new" ? "/categories" : `/admin/products/${id}`,
   );
-  if (data.loading) return <Notice>Loading editor…</Notice>;
+  if (data.loading) return <Notice>Đang tải trình chỉnh sửa…</Notice>;
   if (data.error)
     return (
       <Notice error>
         {data.error.message}{" "}
         <button className="text-button" onClick={onClose}>
-          Back to catalog
+          Quay lại danh mục
         </button>
       </Notice>
     );
@@ -441,7 +439,7 @@ export default function AdminCatalog() {
               body: { version: product.version, active: true },
             },
       );
-      setMessage(product.active ? "Product hidden." : "Product published.");
+      setMessage(product.active ? "Đã ẩn sản phẩm." : "Đã hiển thị sản phẩm.");
       catalog.refresh();
     } catch (err) {
       setError(err.message);
@@ -451,20 +449,20 @@ export default function AdminCatalog() {
   }
   function saved() {
     setSelected(null);
-    setMessage("Product saved.");
+    setMessage("Đã lưu sản phẩm.");
     catalog.refresh();
   }
   return (
     <div className="shell page-section">
       <nav className="breadcrumbs">
-        <Link to="/admin">Admin</Link>
+        <Link to="/admin">Quản trị</Link>
         <span>/</span>
-        <span>Catalog</span>
+        <span>Danh mục sản phẩm</span>
       </nav>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">KEEP THE STORE CURRENT</p>
-          <h1 className="page-title">Catalog management.</h1>
+          <p className="eyebrow">CẬP NHẬT CỬA HÀNG</p>
+          <h1 className="page-title">Quản lý danh mục sản phẩm.</h1>
         </div>
         {selected === null && (
           <button
@@ -474,16 +472,16 @@ export default function AdminCatalog() {
               setMessage("");
             }}
           >
-            Add product +
+            Thêm sản phẩm +
           </button>
         )}
       </div>
       {message && <Notice>{message}</Notice>}
       {error && <Notice error>{error}</Notice>}
       {categories.loading || brands.loading ? (
-        <Notice>Loading categories and brands…</Notice>
+        <Notice>Đang tải danh mục và thương hiệu…</Notice>
       ) : categories.error || brands.error ? (
-        <Notice error>Could not load catalog options.</Notice>
+        <Notice error>Không tải được danh mục và thương hiệu.</Notice>
       ) : selected !== null ? (
         <Editor
           id={selected}
@@ -517,19 +515,19 @@ export default function AdminCatalog() {
               }}
             >
               <label className="visually-hidden" htmlFor="admin-search">
-                Search catalog
+                Tìm trong danh mục
               </label>
               <input
                 id="admin-search"
                 name="q"
                 defaultValue={query}
-                placeholder="Search name or SKU"
+                placeholder="Tìm tên hoặc SKU"
                 maxLength={120}
               />
-              <button className="button button-small">Search</button>
+              <button className="button button-small">Tìm kiếm</button>
             </form>
             <label>
-              Visibility{" "}
+              Trạng thái hiển thị{" "}
               <select
                 value={active}
                 onChange={(event) => {
@@ -537,19 +535,19 @@ export default function AdminCatalog() {
                   setPage(1);
                 }}
               >
-                <option value="all">All products</option>
-                <option value="true">Published</option>
-                <option value="false">Hidden</option>
+                <option value="all">Tất cả sản phẩm</option>
+                <option value="true">Đang hiển thị</option>
+                <option value="false">Đã ẩn</option>
               </select>
             </label>
           </div>
           {catalog.loading ? (
-            <Notice>Loading products…</Notice>
+            <Notice>Đang tải sản phẩm…</Notice>
           ) : catalog.error ? (
             <Notice error>{catalog.error.message}</Notice>
           ) : !catalog.data.products.length ? (
             <Notice>
-              No products match. Try another search or add a product.
+              Không tìm thấy sản phẩm. Hãy thử tìm kiếm khác hoặc thêm sản phẩm.
             </Notice>
           ) : (
             <>
@@ -557,12 +555,12 @@ export default function AdminCatalog() {
                 <table className="management-table">
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th>Category / brand</th>
-                      <th>Price</th>
-                      <th>Stock</th>
-                      <th>Visibility</th>
-                      <th>Actions</th>
+                      <th>Sản phẩm</th>
+                      <th>Danh mục / thương hiệu</th>
+                      <th>Giá</th>
+                      <th>Tồn kho</th>
+                      <th>Trạng thái hiển thị</th>
+                      <th>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -573,12 +571,12 @@ export default function AdminCatalog() {
                           <small>{product.sku}</small>
                         </td>
                         <td>
-                          {product.category.name}
+                          {viText(product.category.name)}
                           <small>{product.brand.name}</small>
                         </td>
                         <td>{money(product.price)}</td>
                         <td>{product.stock}</td>
-                        <td>{product.active ? "Published" : "Hidden"}</td>
+                        <td>{product.active ? "Đang hiển thị" : "Đã ẩn"}</td>
                         <td className="row-actions">
                           <button
                             className="text-button"
@@ -595,7 +593,7 @@ export default function AdminCatalog() {
                             disabled={pending}
                             onClick={() => visibility(product)}
                           >
-                            {product.active ? "Hide" : "Publish"}
+                            {product.active ? "Ẩn" : "Hiển thị"}
                           </button>
                         </td>
                       </tr>
@@ -610,9 +608,9 @@ export default function AdminCatalog() {
                     disabled={page <= 1}
                     onClick={() => setPage((value) => value - 1)}
                   >
-                    Previous
+                    Trước
                   </button>
-                  <span>Page {page}</span>
+                  <span>Trang {page}</span>
                   <button
                     className="button button-secondary"
                     disabled={
@@ -620,7 +618,7 @@ export default function AdminCatalog() {
                     }
                     onClick={() => setPage((value) => value + 1)}
                   >
-                    Next
+                    Tiếp
                   </button>
                 </nav>
               )}

@@ -14,6 +14,7 @@ import { useAuth } from "./auth-context.js";
 import { useShop } from "./shop-context.js";
 import useRemote from "./useRemote.js";
 import { money } from "./format.js";
+import { viText } from "./vi.js";
 import Catalog from "./Catalog.jsx";
 import { AddToCart } from "./shop-ui.jsx";
 import { CartPage, CheckoutPage } from "./ShopPages.jsx";
@@ -53,14 +54,14 @@ function Layout() {
   return (
     <>
       <a href="#main-content" className="skip-link">
-        Skip to content
+        Bỏ qua đến nội dung
       </a>
       <div className="announcement">
-        A little more clarity. A better next build.
+        Lựa chọn rõ ràng hơn cho bộ máy tính tiếp theo.
       </div>
       <header className="site-header">
         <div className="shell header-inner">
-          <Link to="/" className="brand" aria-label="PCBuilder home">
+          <Link to="/" className="brand" aria-label="Trang chủ PCBuilder">
             <span className="brand-mark">
               p<span>c</span>
             </span>
@@ -68,21 +69,21 @@ function Layout() {
               PCBuilder<span className="brand-dot">.</span>
             </span>
           </Link>
-          <nav className="header-nav" aria-label="Main navigation">
+          <nav className="header-nav" aria-label="Điều hướng chính">
             <NavLink to="/" end>
-              Explore products
+              Khám phá sản phẩm
             </NavLink>
             {user && (
               <>
-                <NavLink to="/cart">Cart ({cart?.quantity ?? 0})</NavLink>
-                <NavLink to="/orders">My orders</NavLink>
+                <NavLink to="/cart">Giỏ hàng ({cart?.quantity ?? 0})</NavLink>
+                <NavLink to="/orders">Đơn hàng của tôi</NavLink>
               </>
             )}
-            {user?.role === "ADMIN" && <NavLink to="/admin">Admin</NavLink>}
+            {user?.role === "ADMIN" && <NavLink to="/admin">Quản trị</NavLink>}
           </nav>
           <div className="account-nav">
             {loading ? (
-              <span className="muted">Connecting…</span>
+              <span className="muted">Đang kết nối…</span>
             ) : user ? (
               <>
                 <Link className="account-link" to="/account">
@@ -96,16 +97,16 @@ function Layout() {
                   onClick={logout}
                   disabled={signingOut}
                 >
-                  {signingOut ? "Signing out…" : "Sign out"}
+                  {signingOut ? "Đang đăng xuất…" : "Đăng xuất"}
                 </button>
               </>
             ) : (
               <>
                 <Link className="text-button" to="/login">
-                  Sign in
+                  Đăng nhập
                 </Link>
                 <Link className="button button-small" to="/register">
-                  Create account <span aria-hidden="true">↗</span>
+                  Tạo tài khoản <span aria-hidden="true">↗</span>
                 </Link>
               </>
             )}
@@ -114,7 +115,7 @@ function Layout() {
       </header>
       {(error || logoutError) && (
         <div className="shell">
-          <Message error>{logoutError || `Account service: ${error}`}</Message>
+          <Message error>{logoutError || `Dịch vụ tài khoản: ${error}`}</Message>
         </div>
       )}
       <main id="main-content" tabIndex={-1}>
@@ -125,8 +126,8 @@ function Layout() {
           <Link to="/" className="footer-brand">
             PCBuilder.
           </Link>
-          <p>Thoughtful tech. Clear choices.</p>
-          <span>Student project · Demo catalog</span>
+          <p>Công nghệ phù hợp. Lựa chọn rõ ràng.</p>
+          <span>Máy tính và linh kiện cho mọi nhu cầu</span>
         </div>
       </footer>
     </>
@@ -137,7 +138,7 @@ function Stock({ stock }) {
   return (
     <span className={`stock ${stock ? "" : "stock-empty"}`}>
       <span aria-hidden="true">●</span>{" "}
-      {stock ? `${stock} in stock` : "Out of stock"}
+      {stock ? `${stock} còn hàng` : "Hết hàng"}
     </span>
   );
 }
@@ -149,22 +150,22 @@ function ProductDetail() {
   if (loading)
     return (
       <div className="shell page-section">
-        <Message>Loading product…</Message>
+        <Message>Đang tải sản phẩm…</Message>
       </div>
     );
   if (error)
     return (
       <div className="shell page-section">
         <Message error>{error.message}</Message>
-        <Link to="/">Back to products</Link>
+        <Link to="/">Quay lại sản phẩm</Link>
       </div>
     );
   const { product } = data;
   const image = product.images[imageIndex] ?? product.images[0];
   return (
     <div className="shell page-section">
-      <nav className="breadcrumbs" aria-label="Breadcrumb">
-        <Link to="/">Products</Link>
+      <nav className="breadcrumbs" aria-label="Đường dẫn điều hướng">
+        <Link to="/">Sản phẩm</Link>
         <span aria-hidden="true">/</span>
         <span>{product.name}</span>
       </nav>
@@ -172,7 +173,7 @@ function ProductDetail() {
         <div>
           <div className="detail-image">
             {image && (
-              <img src={image.url} alt={image.alt} width="480" height="360" />
+              <img src={image.url} alt={viText(image.alt)} width="480" height="360" />
             )}
           </div>
           {product.images.length > 1 && (
@@ -180,7 +181,7 @@ function ProductDetail() {
               {product.images.map((item, index) => (
                 <button
                   key={item.id}
-                  aria-label={`View product image ${index + 1}`}
+                  aria-label={`Xem ảnh sản phẩm ${index + 1}`}
                   aria-pressed={index === imageIndex}
                   onClick={() => setImageIndex(index)}
                 >
@@ -192,36 +193,32 @@ function ProductDetail() {
         </div>
         <section className="detail-copy">
           <p className="eyebrow">
-            {product.brand.name} · {product.category.name}
+            {product.brand.name} · {viText(product.category.name)}
           </p>
           <h1>{product.name}</h1>
-          <p className="detail-description">{product.description}</p>
+          <p className="detail-description">{viText(product.description)}</p>
           <strong className="detail-price">{money(product.price)}</strong>
           <Stock stock={product.stock} />
           <p className="warranty">
-            <span aria-hidden="true">✓</span> {product.warrantyText}
+            <span aria-hidden="true">✓</span> {viText(product.warrantyText)}
           </p>
           <AddToCart product={product} />
           <div className="detail-next">
-            <strong>Ready for your next setup?</strong>
+            <strong>Sẵn sàng cho bộ máy tính tiếp theo?</strong>
             <p>
-              Add it to your cart, then review delivery details and pay cash on
-              delivery.
+              Thêm vào giỏ hàng, kiểm tra thông tin giao hàng rồi thanh toán khi nhận hàng.
             </p>
           </div>
-          <small className="muted">
-            SKU: {product.sku} · Illustrative demo product
-          </small>
         </section>
       </div>
       <section className="spec-section">
-        <p className="eyebrow">THE DETAILS THAT MATTER</p>
-        <h2>Technical specifications</h2>
+        <p className="eyebrow">THÔNG TIN CẦN BIẾT</p>
+        <h2>Thông số kỹ thuật</h2>
         <dl className="spec-list">
           {product.specs.map((spec) => (
             <div key={spec.id}>
-              <dt>{spec.name}</dt>
-              <dd>{spec.value}</dd>
+              <dt>{viText(spec.name)}</dt>
+              <dd>{viText(spec.value)}</dd>
             </div>
           ))}
         </dl>
@@ -278,35 +275,35 @@ function AuthPage({ register = false }) {
   return (
     <div className="shell auth-layout">
       <aside className="auth-intro">
-        <p className="eyebrow">A LITTLE MORE POSSIBILITY</p>
+        <p className="eyebrow">THÊM NHIỀU KHẢ NĂNG</p>
         <h1>
-          Your next chapter.
+          Bước tiếp theo của bạn.
           <br />
-          <span>Your own space.</span>
+          <span>Không gian của riêng bạn.</span>
         </h1>
-        <p>Keep your details together and get ready for what comes next.</p>
+        <p>Lưu thông tin của bạn để sẵn sàng cho những lựa chọn tiếp theo.</p>
         <img
           src="/images/desktop.svg"
-          alt="Illustration of a desktop computer"
+          alt="Máy tính để bàn"
           width="480"
           height="360"
         />
       </aside>
       <section className="form-card">
         <Link to="/" className="back-link">
-          ← Back to products
+          ← Quay lại sản phẩm
         </Link>
-        <h2>{register ? "Make yourself at home." : "Welcome back."}</h2>
+        <h2>{register ? "Tạo tài khoản của bạn." : "Chào mừng bạn trở lại."}</h2>
         <p className="muted">
           {register
-            ? "Create your PCBuilder account."
-            : "Sign in to your PCBuilder account."}
+            ? "Tạo tài khoản PCBuilder của bạn."
+            : "Đăng nhập vào tài khoản PCBuilder của bạn."}
         </p>
         {error && <Message error>{error.message}</Message>}
         <form onSubmit={submit}>
           {register && (
             <Field
-              label="Full name"
+              label="Họ và tên"
               name="name"
               autoComplete="name"
               minLength={2}
@@ -316,7 +313,7 @@ function AuthPage({ register = false }) {
             />
           )}
           <Field
-            label="Email address"
+            label="Địa chỉ email"
             name="email"
             type="email"
             autoComplete="email"
@@ -325,7 +322,7 @@ function AuthPage({ register = false }) {
             errors={error?.fields}
           />
           <Field
-            label="Password"
+            label="Mật khẩu"
             name="password"
             type="password"
             autoComplete={register ? "new-password" : "current-password"}
@@ -336,19 +333,18 @@ function AuthPage({ register = false }) {
           />
           {register && (
             <p className="form-hint">
-              Use 8–128 characters. You can update your name and phone number
-              later.
+              Dùng mật khẩu từ 8 đến 128 ký tự. Bạn có thể cập nhật họ tên và số điện thoại sau.
             </p>
           )}
           <button className="button button-full" disabled={pending}>
-            {pending ? "Please wait…" : register ? "Create account" : "Sign in"}
+            {pending ? "Vui lòng chờ…" : register ? "Tạo tài khoản" : "Đăng nhập"}
             <span aria-hidden="true">↗</span>
           </button>
         </form>
         <p className="form-switch">
-          {register ? "Already have an account?" : "New around here?"}{" "}
+          {register ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
           <Link to={register ? "/login" : "/register"}>
-            {register ? "Sign in" : "Create an account"}
+            {register ? "Đăng nhập" : "Tạo tài khoản"}
           </Link>
         </p>
       </section>
@@ -361,21 +357,21 @@ function Protected({ admin = false }) {
   if (loading)
     return (
       <div className="shell page-section">
-        <Message>Checking your session…</Message>
+        <Message>Đang kiểm tra phiên đăng nhập…</Message>
       </div>
     );
   if (error)
     return (
       <div className="shell page-section">
-        <Message error>{error} Refresh to reconnect.</Message>
+        <Message error>{error} Tải lại trang để kết nối lại.</Message>
       </div>
     );
   if (!user) return <Navigate to="/login" replace />;
   if (admin && user.role !== "ADMIN")
     return (
       <div className="shell page-section">
-        <Message error>This page requires an administrator account.</Message>
-        <Link to="/">Back to products</Link>
+        <Message error>Trang này yêu cầu tài khoản quản trị viên.</Message>
+        <Link to="/">Quay lại sản phẩm</Link>
       </div>
     );
   return <Outlet />;
@@ -404,9 +400,9 @@ function Account() {
   }
   return (
     <div className="shell page-section">
-      <p className="eyebrow">YOUR OWN SPACE</p>
-      <h1 className="page-title">Hello, {user.name.split(" ")[0]}.</h1>
-      <p className="muted">Your account details, all in one place.</p>
+      <p className="eyebrow">TÀI KHOẢN CỦA BẠN</p>
+      <h1 className="page-title">Xin chào, {user.name.split(" ")[0]}.</h1>
+      <p className="muted">Thông tin tài khoản của bạn tại đây.</p>
       <div className="account-grid">
         <aside className="account-summary">
           <span className="avatar avatar-large">
@@ -415,20 +411,20 @@ function Account() {
           <h2>{user.name}</h2>
           <p>{user.email}</p>
           <span className="role-badge">
-            {user.role === "ADMIN" ? "Administrator" : "Customer"}
+            {user.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"}
           </span>
           {user.role === "ADMIN" && (
-            <Link to="/admin">Open admin overview ↗</Link>
+            <Link to="/admin">Mở trang quản trị ↗</Link>
           )}
         </aside>
         <section className="form-card profile-card">
-          <h2>Personal information</h2>
-          <p className="muted">Keep your contact details up to date.</p>
+          <h2>Thông tin cá nhân</h2>
+          <p className="muted">Cập nhật thông tin liên hệ của bạn.</p>
           {error && <Message error>{error.message}</Message>}
-          {saved && <Message>Your profile has been saved.</Message>}
+          {saved && <Message>Đã lưu thông tin cá nhân.</Message>}
           <form onSubmit={submit} onChange={() => setSaved(false)}>
             <Field
-              label="Full name"
+              label="Họ và tên"
               name="name"
               autoComplete="name"
               defaultValue={user.name}
@@ -438,17 +434,17 @@ function Account() {
               errors={error?.fields}
             />
             <Field
-              label="Email address"
+              label="Địa chỉ email"
               name="email"
               type="email"
               value={user.email}
               disabled
             />
             <p className="form-hint">
-              Email changes are outside the current sprint.
+              Hiện chưa hỗ trợ thay đổi email.
             </p>
             <Field
-              label="Phone number (optional)"
+              label="Số điện thoại (không bắt buộc)"
               name="phone"
               type="tel"
               autoComplete="tel"
@@ -457,7 +453,7 @@ function Account() {
               errors={error?.fields}
             />
             <button className="button" disabled={pending}>
-              {pending ? "Saving…" : "Save changes"}
+              {pending ? "Đang lưu…" : "Lưu thay đổi"}
             </button>
           </form>
         </section>
@@ -470,39 +466,38 @@ function Admin() {
   const { data, error, loading } = useRemote("/admin/overview");
   return (
     <div className="shell page-section">
-      <p className="eyebrow">ADMINISTRATOR WORKSPACE</p>
-      <h1 className="page-title">Store overview.</h1>
+      <p className="eyebrow">KHU VỰC QUẢN TRỊ</p>
+      <h1 className="page-title">Tổng quan cửa hàng.</h1>
       <p className="muted">
-        Access is checked by the backend on every request.
+        Quyền truy cập được kiểm tra trên mỗi yêu cầu.
       </p>
       {loading ? (
-        <Message>Loading overview…</Message>
+        <Message>Đang tải tổng quan…</Message>
       ) : error ? (
         <Message error>{error.message}</Message>
       ) : (
         <div className="overview-grid">
           <div>
-            <span>Active products</span>
+            <span>Sản phẩm đang bán</span>
             <strong>{data.products}</strong>
           </div>
           <div>
-            <span>Customer accounts</span>
+            <span>Tài khoản khách hàng</span>
             <strong>{data.customers}</strong>
           </div>
         </div>
       )}
       <Message>
-        Manage products, specifications, images and stock in the catalog editor.
-        Process customer orders in the order queue.
+        Quản lý sản phẩm, thông số, hình ảnh và tồn kho trong danh mục. Xử lý đơn hàng trong danh sách đơn.
       </Message>
       <Link className="button" to="/admin/products">
-        Manage catalog ↗
+        Quản lý danh mục ↗
       </Link>
       <Link
         className="button button-secondary admin-orders-link"
         to="/admin/orders"
       >
-        Manage orders ↗
+        Quản lý đơn hàng ↗
       </Link>
     </div>
   );
@@ -533,8 +528,8 @@ export default function App() {
           path="*"
           element={
             <div className="shell page-section">
-              <h1 className="page-title">Page not found.</h1>
-              <Link to="/">Back to products</Link>
+              <h1 className="page-title">Không tìm thấy trang.</h1>
+              <Link to="/">Quay lại sản phẩm</Link>
             </div>
           }
         />

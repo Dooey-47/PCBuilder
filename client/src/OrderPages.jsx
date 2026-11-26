@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "./api.js";
 import useRemote from "./useRemote.js";
 import { money } from "./format.js";
+import { viDate } from "./vi.js";
 import { Notice, Totals } from "./shop-ui.jsx";
 
 const states = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"];
@@ -12,29 +13,38 @@ const forward = {
   CONFIRMED: "SHIPPING",
   SHIPPING: "DELIVERED",
 };
-const label = (value) =>
-  value === "COD"
-    ? "COD"
-    : value
-      ? value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ")
-      : "—";
+const labels = {
+  PENDING: "Đang chờ",
+  CONFIRMED: "Đã xác nhận",
+  SHIPPING: "Đang giao",
+  DELIVERED: "Đã giao",
+  CANCELLED: "Đã hủy",
+  PAID: "Đã thanh toán",
+  FAILED: "Thất bại",
+  REFUNDED: "Đã hoàn tiền",
+  CUSTOMER: "Khách hàng",
+  ADMIN: "Quản trị viên",
+  COD: "Thanh toán khi nhận hàng",
+  SIMULATED: "Thanh toán mô phỏng",
+};
+const label = (value) => labels[value] ?? value ?? "—";
 const actions = {
-  PLACED: "Order placed",
-  IMPORTED: "Imported order snapshot",
-  CONFIRMED: "Order confirmed",
-  SHIPPING: "Dispatched",
-  DELIVERED: "Delivered",
-  CANCELLED: "Cancelled; stock restored",
-  SIMULATED_PAID: "Simulated payment succeeded",
-  SIMULATED_FAILED: "Simulated payment failed",
-  COD_COLLECTED: "COD collection confirmed",
+  PLACED: "Đã đặt hàng",
+  IMPORTED: "Dữ liệu đơn hàng đã nhập",
+  CONFIRMED: "Đã xác nhận đơn hàng",
+  SHIPPING: "Đã giao cho đơn vị vận chuyển",
+  DELIVERED: "Đã giao hàng",
+  CANCELLED: "Đã hủy đơn và hoàn tồn kho",
+  SIMULATED_PAID: "Thanh toán mô phỏng thành công",
+  SIMULATED_FAILED: "Thanh toán mô phỏng thất bại",
+  COD_COLLECTED: "Đã xác nhận thu tiền COD",
 };
 const descriptions = {
-  PENDING: "Waiting for administrator confirmation.",
-  CONFIRMED: "Confirmed and being prepared.",
-  SHIPPING: "Your order is on its way.",
-  DELIVERED: "Delivery has been completed.",
-  CANCELLED: "This order was cancelled. Its stock has been restored.",
+  PENDING: "Đang chờ quản trị viên xác nhận.",
+  CONFIRMED: "Đơn hàng đã được xác nhận và đang chuẩn bị.",
+  SHIPPING: "Đơn hàng đang trên đường giao đến bạn.",
+  DELIVERED: "Đơn hàng đã được giao.",
+  CANCELLED: "Đơn hàng đã bị hủy và hàng đã được hoàn vào kho.",
 };
 function Badge({ value }) {
   return (
@@ -64,27 +74,27 @@ export function OrdersPage({ admin = false }) {
   return (
     <div className="shell page-section">
       <p className="eyebrow">
-        {admin ? "ADMINISTRATOR WORKSPACE" : "YOUR PURCHASES"}
+        {admin ? "KHU VỰC QUẢN TRỊ" : "LỊCH SỬ MUA HÀNG"}
       </p>
       <h1 className="page-title">
-        {admin ? "Manage orders." : "Your orders."}
+        {admin ? "Quản lý đơn hàng." : "Đơn hàng của bạn."}
       </h1>
       {admin && (
         <Link className="back-link" to="/admin">
-          ← Store overview
+          ← Tổng quan cửa hàng
         </Link>
       )}
       <form
         key={params.toString()}
         onSubmit={filter}
         className="order-filters"
-        aria-label="Filter orders"
+        aria-label="Lọc đơn hàng"
       >
         <div className="field">
           <label htmlFor="order-search">
             {admin
-              ? "Reference, recipient or customer email"
-              : "Order reference"}
+              ? "Mã đơn, người nhận hoặc email khách hàng"
+              : "Mã đơn hàng"}
           </label>
           <input
             id="order-search"
@@ -94,45 +104,45 @@ export function OrdersPage({ admin = false }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="order-status">Order status</label>
+          <label htmlFor="order-status">Trạng thái đơn hàng</label>
           <select
             id="order-status"
             name="status"
             defaultValue={params.get("status") ?? ""}
           >
-            <option value="">All statuses</option>
+            <option value="">Tất cả trạng thái</option>
             {states.map((value) => (
-              <option key={value}>{value}</option>
+              <option key={value} value={value}>{label(value)}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label htmlFor="payment-status">Payment status</label>
+          <label htmlFor="payment-status">Trạng thái thanh toán</label>
           <select
             id="payment-status"
             name="paymentStatus"
             defaultValue={params.get("paymentStatus") ?? ""}
           >
-            <option value="">All payments</option>
+            <option value="">Tất cả trạng thái thanh toán</option>
             {payments.map((value) => (
-              <option key={value}>{value}</option>
+              <option key={value} value={value}>{label(value)}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label htmlFor="payment-filter">Payment method</label>
+          <label htmlFor="payment-filter">Phương thức thanh toán</label>
           <select
             id="payment-filter"
             name="paymentMethod"
             defaultValue={params.get("paymentMethod") ?? ""}
           >
-            <option value="">All methods</option>
+            <option value="">Tất cả phương thức</option>
             <option value="COD">COD</option>
-            <option value="SIMULATED">Simulated</option>
+            <option value="SIMULATED">Mô phỏng</option>
           </select>
         </div>
         <div className="field">
-          <label htmlFor="order-after">From date (UTC)</label>
+          <label htmlFor="order-after">Từ ngày (UTC)</label>
           <input
             id="order-after"
             name="after"
@@ -141,7 +151,7 @@ export function OrdersPage({ admin = false }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="order-before">Through date (UTC)</label>
+          <label htmlFor="order-before">Đến ngày (UTC)</label>
           <input
             id="order-before"
             name="before"
@@ -150,32 +160,32 @@ export function OrdersPage({ admin = false }) {
           />
         </div>
         <div className="order-actions">
-          <button className="button button-small">Apply filters</button>
+          <button className="button button-small">Áp dụng bộ lọc</button>
           <button
             className="text-button"
             type="button"
             onClick={() => setParams({})}
           >
-            Clear
+            Xóa lọc
           </button>
         </div>
       </form>
       <div className="order-list-heading">
         <p className="muted">
-          {data ? `${data.total} matching order(s)` : "Order history"}
+          {data ? `${data.total} đơn hàng phù hợp` : "Lịch sử đơn hàng"}
         </p>
         <button className="text-button" onClick={refresh} disabled={loading}>
-          Refresh orders
+          Làm mới đơn hàng
         </button>
       </div>
       {loading ? (
-        <Notice>Loading orders…</Notice>
+        <Notice>Đang tải đơn hàng…</Notice>
       ) : error ? (
         <Notice error>{error.message}</Notice>
       ) : !data.orders.length ? (
         <Notice>
-          No orders match these filters.{" "}
-          {!admin && <Link to="/">Explore products</Link>}
+          Không có đơn hàng phù hợp với bộ lọc.{" "}
+          {!admin && <Link to="/">Khám phá sản phẩm</Link>}
         </Notice>
       ) : (
         <>
@@ -183,12 +193,12 @@ export function OrdersPage({ admin = false }) {
             <table className="management-table">
               <thead>
                 <tr>
-                  <th>Order</th>
-                  {admin && <th>Customer</th>}
-                  <th>Placed</th>
-                  <th>Status</th>
-                  <th>Payment</th>
-                  <th>Total</th>
+                  <th>Đơn hàng</th>
+                  {admin && <th>Khách hàng</th>}
+                  <th>Ngày đặt</th>
+                  <th>Trạng thái</th>
+                  <th>Thanh toán</th>
+                  <th>Tổng cộng</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,7 +217,7 @@ export function OrdersPage({ admin = false }) {
                         </small>
                       </td>
                     )}
-                    <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                    <td>{viDate(order.createdAt)}</td>
                     <td>
                       <Badge value={order.status} />
                     </td>
@@ -226,21 +236,21 @@ export function OrdersPage({ admin = false }) {
         </>
       )}
       {!loading && !error && (data.total > data.pageSize || page > 1) && (
-        <nav className="pagination-row" aria-label="Order pages">
+        <nav className="pagination-row" aria-label="Trang đơn hàng">
           <button
             className="button button-secondary"
             disabled={page <= 1}
             onClick={() => turn(-1)}
           >
-            Previous
+            Trước
           </button>
-          <span>Page {page}</span>
+          <span>Trang {page}</span>
           <button
             className="button button-secondary"
             disabled={page * data.pageSize >= data.total}
             onClick={() => turn(1)}
           >
-            Next
+            Tiếp
           </button>
         </nav>
       )}
@@ -263,11 +273,11 @@ export function OrderReceipt({ admin = false }) {
         method,
         body: { version: data.order.version, ...body },
       });
-      setMessage({ text: "Order updated." });
+      setMessage({ text: "Đã cập nhật đơn hàng." });
     } catch (err) {
       setMessage({
         error: true,
-        text: `${err.message} The latest details are being loaded. Check the result before retrying.`,
+        text: `${err.message} Đang tải thông tin mới nhất. Hãy kiểm tra kết quả trước khi thử lại.`,
       });
     } finally {
       setConfirm(null);
@@ -281,10 +291,10 @@ export function OrderReceipt({ admin = false }) {
   return (
     <div className="shell page-section">
       <Link className="back-link" to={admin ? "/admin/orders" : "/orders"}>
-        ← {admin ? "Manage orders" : "Your orders"}
+        ← {admin ? "Quản lý đơn hàng" : "Đơn hàng của bạn"}
       </Link>
       <p className="eyebrow">
-        {admin ? "ORDER PROCESSING" : "YOUR ORDER DETAILS"}
+        {admin ? "XỬ LÝ ĐƠN HÀNG" : "CHI TIẾT ĐƠN HÀNG"}
       </p>
       {message && (
         <div role="status">
@@ -292,12 +302,12 @@ export function OrderReceipt({ admin = false }) {
         </div>
       )}
       {loading ? (
-        <Notice>Loading order…</Notice>
+        <Notice>Đang tải đơn hàng…</Notice>
       ) : error ? (
         <Notice error>
           {error.message}{" "}
           <button className="text-button" onClick={refresh}>
-            Retry
+            Thử lại
           </button>
         </Notice>
       ) : (
@@ -305,8 +315,8 @@ export function OrderReceipt({ admin = false }) {
           <div className="order-list-heading">
             <h1 className="page-title">
               {order.status === "PENDING"
-                ? "Order received."
-                : `Order ${label(order.status).toLowerCase()}.`}
+                ? "Đã nhận đơn hàng."
+                : `Đơn hàng: ${label(order.status).toLowerCase()}.`}
             </h1>
             <button
               className="text-button"
@@ -316,12 +326,12 @@ export function OrderReceipt({ admin = false }) {
               }}
               disabled={pending}
             >
-              Refresh details
+              Làm mới chi tiết
             </button>
           </div>
           <p className="muted">{descriptions[order.status]}</p>
           {order.status !== "CANCELLED" && (
-            <ol className="order-progress" aria-label="Order progress">
+            <ol className="order-progress" aria-label="Tiến trình đơn hàng">
               {states.slice(0, 4).map((state, index) => (
                 <li
                   key={state}
@@ -341,23 +351,23 @@ export function OrderReceipt({ admin = false }) {
                 <h2>{order.reference}</h2>
                 <div className="order-actions">
                   <span>
-                    Order: <Badge value={order.status} />
+                    Đơn hàng: <Badge value={order.status} />
                   </span>
                   <span>
-                    Payment: <Badge value={order.paymentStatus} /> (
+                    Thanh toán: <Badge value={order.paymentStatus} /> (
                     {label(order.paymentMethod)})
                   </span>
                 </div>
                 <p className="muted">
-                  Placed {new Date(order.createdAt).toLocaleString()}
+                  Đặt lúc {new Date(order.createdAt).toLocaleString("vi-VN")}
                 </p>
                 {admin && (
                   <p>
-                    Customer: {order.user.name} · {order.user.email}
-                    {!order.user.active && " (inactive account)"}
+                    Khách hàng: {order.user.name} · {order.user.email}
+                    {!order.user.active && " (tài khoản đã vô hiệu hóa)"}
                   </p>
                 )}
-                <h3 className="small-heading">Delivery details</h3>
+                <h3 className="small-heading">Thông tin giao hàng</h3>
                 <p className="delivery-address">
                   {order.recipientName}
                   <br />
@@ -379,8 +389,8 @@ export function OrderReceipt({ admin = false }) {
                   </li>
                 ))}
               </ul>
-              <section className="order-history" aria-label="Order activity">
-                <h2>Order activity</h2>
+              <section className="order-history" aria-label="Lịch sử xử lý đơn">
+                <h2>Lịch sử xử lý đơn</h2>
                 <ol>
                   {order.events.map((event) => (
                     <li key={event.id}>
@@ -388,12 +398,11 @@ export function OrderReceipt({ admin = false }) {
                         {actions[event.action] ?? label(event.action)}
                       </strong>
                       <small>
-                        {new Date(event.createdAt).toLocaleString()} ·{" "}
-                        {event.actorRole ? label(event.actorRole) : "System"}
+                        {viDate(event.createdAt, true)} ·{" "}
+                        {event.actorRole ? label(event.actorRole) : "Hệ thống"}
                       </small>
                       <span>
-                        {label(event.status)} · Payment{" "}
-                        {label(event.paymentStatus).toLowerCase()}
+                        {label(event.status)} · Thanh toán: {label(event.paymentStatus)}
                       </span>
                     </li>
                   ))}
@@ -401,23 +410,21 @@ export function OrderReceipt({ admin = false }) {
               </section>
             </section>
             <aside className="summary-card">
-              <h2>Order total</h2>
+              <h2>Tổng tiền đơn hàng</h2>
               <Totals data={order} />
-              <section className="order-controls" aria-label="Order actions">
+              <section className="order-controls" aria-label="Thao tác đơn hàng">
                 {!admin &&
                   order.paymentMethod === "SIMULATED" &&
                   order.status === "PENDING" &&
                   order.paymentStatus !== "PAID" && (
                     <>
-                      <h3 className="small-heading">Demo payment</h3>
+                      <h3 className="small-heading">Thanh toán mô phỏng</h3>
                       <p className="form-hint">
-                        No real charge. Stock stays reserved until you pay or
-                        cancel. Failed payments can be retried.
+                        Không có giao dịch thật. Hàng được giữ cho đến khi bạn thanh toán hoặc hủy đơn. Có thể thử lại nếu thanh toán thất bại.
                       </p>
                       {order.paymentStatus === "FAILED" && (
                         <Notice error>
-                          The simulated payment failed. Try again or cancel this
-                          order.
+                          Thanh toán mô phỏng thất bại. Hãy thử lại hoặc hủy đơn hàng.
                         </Notice>
                       )}
                       <button
@@ -427,7 +434,7 @@ export function OrderReceipt({ admin = false }) {
                           change("simulated-payment", { outcome: "SUCCESS" })
                         }
                       >
-                        Simulate successful payment
+                        Mô phỏng thanh toán thành công
                       </button>
                       <button
                         className="button button-secondary button-full"
@@ -436,7 +443,7 @@ export function OrderReceipt({ admin = false }) {
                           change("simulated-payment", { outcome: "FAILURE" })
                         }
                       >
-                        Simulate failed payment
+                        Mô phỏng thanh toán thất bại
                       </button>
                     </>
                   )}
@@ -455,16 +462,15 @@ export function OrderReceipt({ admin = false }) {
                     >
                       {
                         {
-                          PENDING: "Confirm order",
-                          CONFIRMED: "Mark as shipping",
-                          SHIPPING: "Mark as delivered",
+                          PENDING: "Xác nhận đơn hàng",
+                          CONFIRMED: "Chuyển sang đang giao",
+                          SHIPPING: "Đánh dấu đã giao",
                         }[order.status]
                       }
                     </button>
                     {unpaidSimulation && (
                       <p className="form-hint">
-                        Waiting for a successful simulated payment before
-                        confirmation.
+                        Cần thanh toán mô phỏng thành công trước khi xác nhận đơn.
                       </p>
                     )}
                   </>
@@ -475,7 +481,7 @@ export function OrderReceipt({ admin = false }) {
                     disabled={pending}
                     onClick={() => setConfirm("cancel")}
                   >
-                    Cancel order
+                    Hủy đơn hàng
                   </button>
                 )}
                 {admin &&
@@ -487,19 +493,19 @@ export function OrderReceipt({ admin = false }) {
                       disabled={pending}
                       onClick={() => setConfirm("collect")}
                     >
-                      Record COD collection
+                      Xác nhận đã thu tiền COD
                     </button>
                   )}
                 {confirm && (
                   <div
                     className="order-confirm"
                     role="group"
-                    aria-label="Confirm action"
+                    aria-label="Xác nhận thao tác"
                   >
                     <p>
                       {confirm === "cancel"
-                        ? `Cancel this Pending order and restore its stock?${order.paymentStatus === "PAID" ? " Its demo payment will be marked Refunded." : ""}`
-                        : "Confirm that the full COD amount has actually been collected?"}
+                        ? `Hủy đơn hàng đang chờ và hoàn lại tồn kho?${order.paymentStatus === "PAID" ? " Khoản thanh toán mô phỏng sẽ được đánh dấu đã hoàn tiền." : ""}`
+                        : "Bạn xác nhận đã thu đủ tiền COD?"}
                     </p>
                     <div className="order-actions">
                       <button
@@ -515,39 +521,37 @@ export function OrderReceipt({ admin = false }) {
                             : change("collect-cod", {})
                         }
                       >
-                        Yes,{" "}
+                        Có,{" "}
                         {confirm === "cancel"
-                          ? "cancel order"
-                          : "confirm collection"}
+                          ? "hủy đơn hàng"
+                          : "xác nhận đã thu tiền"}
                       </button>
                       <button
                         className="text-button"
                         disabled={pending}
                         onClick={() => setConfirm(null)}
                       >
-                        Keep order unchanged
+                        Giữ nguyên đơn hàng
                       </button>
                     </div>
                   </div>
                 )}
-                {pending && <p role="status">Updating order…</p>}
+                {pending && <p role="status">Đang cập nhật đơn hàng…</p>}
                 {order.paymentMethod === "COD" &&
                   order.paymentStatus === "PENDING" &&
                   order.status !== "CANCELLED" && (
                     <p className="form-hint">
-                      COD stays Pending until an administrator records
-                      collection after delivery.
+                      Thanh toán COD vẫn ở trạng thái chờ cho đến khi quản trị viên xác nhận đã thu tiền sau khi giao hàng.
                     </p>
                   )}
                 {order.paymentStatus === "REFUNDED" && (
                   <p className="form-hint">
-                    The simulated payment was refunded when this Pending order
-                    was cancelled. No real money moved.
+                    Khoản thanh toán mô phỏng đã được hoàn khi hủy đơn đang chờ. Không có giao dịch tiền thật.
                   </p>
                 )}
               </section>
               <Link to={admin ? "/admin/orders" : "/"} className="back-link">
-                {admin ? "Back to order queue" : "Continue browsing ↗"}
+                {admin ? "Quay lại danh sách đơn hàng" : "Tiếp tục mua sắm ↗"}
               </Link>
             </aside>
           </div>
