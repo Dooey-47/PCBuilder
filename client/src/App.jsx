@@ -20,6 +20,7 @@ import { AddToCart } from "./shop-ui.jsx";
 import { CartPage, CheckoutPage } from "./ShopPages.jsx";
 import { OrderReceipt, OrdersPage } from "./OrderPages.jsx";
 import AdminCatalog from "./AdminCatalog.jsx";
+import { AdminReports, AdminUsers } from "./AdminOperations.jsx";
 
 function Message({ children, error = false }) {
   return (
@@ -57,7 +58,9 @@ function Layout() {
         Bỏ qua đến nội dung
       </a>
       <div className="announcement">
-        Lựa chọn rõ ràng hơn cho bộ máy tính tiếp theo.
+        <span>Giao hàng toàn quốc</span>
+        <span aria-hidden="true">·</span>
+        <a href="tel:0900000000">Hotline: 0900 000 000</a>
       </div>
       <header className="site-header">
         <div className="shell header-inner">
@@ -123,12 +126,23 @@ function Layout() {
       </main>
       <footer className="site-footer">
         <div className="shell footer-inner">
-          <Link to="/" className="footer-brand">
-            PCBuilder.
-          </Link>
-          <p>Công nghệ phù hợp. Lựa chọn rõ ràng.</p>
-          <span>Máy tính và linh kiện cho mọi nhu cầu</span>
+          <div className="footer-about">
+            <Link to="/" className="footer-brand">PCBuilder<span>.</span></Link>
+            <p>Máy tính và linh kiện công nghệ cho nhu cầu học tập, làm việc và giải trí.</p>
+            <strong>Giao hàng toàn quốc</strong>
+          </div>
+          <div className="footer-links">
+            <h2>Mua sắm</h2>
+            <Link to="/">Khám phá sản phẩm</Link>
+            <Link to="/orders">Tra cứu đơn hàng</Link>
+          </div>
+          <div className="footer-contact">
+            <h2>Liên hệ</h2>
+            <a href="tel:0900000000">Hotline: 0900 000 000</a>
+            <span>Hỗ trợ khách hàng mỗi ngày</span>
+          </div>
         </div>
+        <div className="shell footer-bottom">© {new Date().getFullYear()} PCBuilder. All rights reserved.</div>
       </footer>
     </>
   );
@@ -490,15 +504,12 @@ function Admin() {
       <Message>
         Quản lý sản phẩm, thông số, hình ảnh và tồn kho trong danh mục. Xử lý đơn hàng trong danh sách đơn.
       </Message>
-      <Link className="button" to="/admin/products">
-        Quản lý danh mục ↗
-      </Link>
-      <Link
-        className="button button-secondary admin-orders-link"
-        to="/admin/orders"
-      >
-        Quản lý đơn hàng ↗
-      </Link>
+      <nav className="admin-quick-links" aria-label="Công cụ quản trị">
+        <Link className="button" to="/admin/products">Quản lý danh mục <span aria-hidden="true">↗</span></Link>
+        <Link className="button button-secondary" to="/admin/orders">Quản lý đơn hàng <span aria-hidden="true">↗</span></Link>
+        <Link className="button button-secondary" to="/admin/users">Quản lý khách hàng <span aria-hidden="true">↗</span></Link>
+        <Link className="button button-secondary" to="/admin/reports">Xem báo cáo <span aria-hidden="true">↗</span></Link>
+      </nav>
     </div>
   );
 }
@@ -523,6 +534,8 @@ export default function App() {
           <Route path="admin/products" element={<AdminCatalog />} />
           <Route path="admin/orders" element={<OrdersPage admin />} />
           <Route path="admin/orders/:id" element={<OrderReceipt admin />} />
+          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/reports" element={<AdminReports />} />
         </Route>
         <Route
           path="*"

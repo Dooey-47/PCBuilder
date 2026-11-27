@@ -229,6 +229,37 @@ export function createApp({
     ]);
     res.json({ products, customers });
   });
+  app.get("/api/admin/users", requireUser, async (req, res) => {
+    if (req.user.role !== "ADMIN") throw httpError(403, "Administrator access is required.");
+    const filters = validated(z.object({ q: z.string().trim().max(80).optional(), page: z.coerce.number().int().min(1).max(10000).default(1) }).strict(), req.query);
+    const { q, page } = filters;
+    const where = { role: "CUSTOMER", ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } : {}) };
+    const [users, total] = await prisma.$transaction([
+      prisma.user.findMany({ where, select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true }, orderBy: { id: "desc" }, skip: (page - 1) * 20, take: 20 }),
+      prisma.user.count({ where }),
+    ]);
+    res.json({ users, total, page, pageSize: 20 });
+  });
+  app.patch("/api/admin/users/:id/active", requireUser, async (req, res) => {
+    if (req.user.role !== "ADMIN") throw httpError(403, "Administrator access is required.");
+    const id = validated(z.coerce.number().int().positive(), req.params.id);
+    const { active } = validated(z.object({ active: z.boolean() }).strict(), req.body);
+    const user = await prisma.user.update({ where: { id, role: "CUSTOMER" }, data: { active }, select: { id: true, name: true, email: true, active: true } });
+    res.json({ user });
+  });
+  app.get("/api/admin/reports", requireUser, async (req, res) => {
+    if (req.user.role !== "ADMIN") throw httpError(403, "Administrator access is required.");
+    const range = validated(z.object({ after: z.iso.date().optional(), before: z.iso.date().optional() }).strict().refine(v => !v.after || !v.before || v.after <= v.before, "Invalid date range."), req.query);
+    const createdAt = range.after || range.before ? { ...(range.after ? { gte: new Date(`${range.after}T00:00:00Z`) } : {}), ...(range.before ? { lt: new Date(Date.parse(`${range.before}T00:00:00Z`) + 86400000) } : {}) } : undefined;
+    const [orders, lowStock, bestSellers] = await prisma.$transaction([
+      prisma.order.findMany({ where: { ...(createdAt ? { createdAt } : {}) }, select: { id: true, reference: true, status: true, paymentStatus: true, total: true } }),
+      prisma.product.findMany({ where: { active: true, stock: { lte: 5 } }, select: { id: true, name: true, stock: true }, orderBy: [{ stock: "asc" }, { name: "asc" }], take: 10 }),
+      prisma.orderItem.groupBy({ by: ["productId", "productName", "sku"], _sum: { quantity: true }, orderBy: { _sum: { quantity: "desc" } }, take: 5 }),
+    ]);
+    const paid = orders.filter(o => o.paymentStatus === "PAID" && o.status !== "CANCELLED");
+    const revenue = paid.reduce((sum, order) => sum + BigInt(order.total.toString()), 0n).toString();
+    res.json({ orders: orders.length, pendingOrders: orders.filter(o => o.status === "PENDING").length, paidOrders: paid.length, revenue, lowStock, bestSellers: bestSellers.map(p => ({ productId: p.productId, name: p.productName, sku: p.sku, quantity: p._sum.quantity ?? 0 })) });
+  });
   registerCommerce(app, { prisma, requireUser, shippingFee });
   registerOrderManagement(app, { prisma, requireUser });
   registerAdminCatalog(app, { prisma, requireUser, uploadDir });

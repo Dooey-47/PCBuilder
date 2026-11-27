@@ -5,16 +5,6 @@ import { AddToCart, Notice } from "./shop-ui.jsx";
 import { money } from "./format.js";
 import { viText, viUseCase } from "./vi.js";
 
-function parsedSpecs(value) {
-  try {
-    const parsed = JSON.parse(value ?? "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
-}
 function Card({ product }) {
   return (
     <article className="product-card">
@@ -69,26 +59,17 @@ export default function Catalog() {
   const category = params.get("category") ?? "";
   const categories = useRemote("/categories"),
     brands = useRemote("/brands");
-  const facets = useRemote(
-    `/catalog-filters${category ? `?category=${encodeURIComponent(category)}` : ""}`,
-  );
-  const query = params.toString();
+  const queryParams = new URLSearchParams(params);
+  queryParams.delete("spec");
+  const query = queryParams.toString();
   const catalog = useRemote(`/products${query ? `?${query}` : ""}`);
-  const page = Number(params.get("page") ?? 1),
-    specs = parsedSpecs(params.get("spec"));
+  const page = Number(params.get("page") ?? 1);
   function change(name, value) {
     const next = new URLSearchParams(params);
     if (value) next.set(name, value);
     else next.delete(name);
     if (name !== "page") next.delete("page");
-    if (name === "category") next.delete("spec");
     setParams(next);
-  }
-  function selectSpec(name, value) {
-    const next = { ...specs };
-    if (value) next[name] = value;
-    else delete next[name];
-    change("spec", Object.keys(next).length ? JSON.stringify(next) : "");
   }
   function submitFilters(event) {
     event.preventDefault();
@@ -112,24 +93,19 @@ export default function Catalog() {
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">
-            <span className="blue-dot" /> KHỞI ĐẦU LỰA CHỌN MỚI
+            <span className="blue-dot" /> PCBUILDER
           </p>
           <h1>
-            Công nghệ phù hợp.
+            Chọn đúng thiết bị.
             <br />
-            <span>Nhiều cơ hội mới.</span>
+            <span>Sẵn sàng bứt phá.</span>
           </h1>
           <p className="hero-description">
-            Chọn thiết bị phù hợp với ý tưởng của bạn.
-            <br />
-            Khám phá, so sánh thông số và mua sắm dễ dàng.
+            Tìm máy tính và linh kiện phù hợp với nhu cầu của bạn.
           </p>
           <a className="button" href="#catalog">
             Khám phá sản phẩm ↗
           </a>
-          <div className="hero-note">
-            ✓ Thông số rõ ràng. Giá minh bạch.
-          </div>
         </div>
         <div className="hero-visual">
           <div className="hero-orbit" />
@@ -193,6 +169,23 @@ export default function Catalog() {
             </button>
           ))}
         </div>
+        <div className="results-toolbar results-toolbar-wide">
+          <span className="muted">Chọn sản phẩm phù hợp với bạn.</span>
+          <label htmlFor="sort">
+            Sắp xếp{" "}
+            <select
+              id="sort"
+              value={params.get("sort") ?? "featured"}
+              onChange={(event) => change("sort", event.target.value)}
+            >
+              <option value="featured">Nổi bật</option>
+              <option value="price_asc">Giá: thấp đến cao</option>
+              <option value="price_desc">Giá: cao đến thấp</option>
+              <option value="name">Tên</option>
+              <option value="newest">Mới nhất</option>
+            </select>
+          </label>
+        </div>
         <div className="catalog-with-filters">
           <details
             className="filter-panel"
@@ -225,6 +218,8 @@ export default function Catalog() {
                   </option>
                 ))}
               </select>
+              <details className="advanced-filters">
+                <summary>Khoảng giá và tồn kho</summary>
               <div className="price-fields">
                 <div>
                   <label htmlFor="min_price">Giá thấp nhất (VND)</label>
@@ -259,62 +254,22 @@ export default function Catalog() {
                 />{" "}
                 Chỉ sản phẩm còn hàng
               </label>
+              </details>
               <button className="button button-full">Áp dụng bộ lọc</button>
             </form>
-            {Boolean(facets.data?.specifications.length) && (
-              <details className="technical-filters" open={Boolean(category)}>
-                <summary>Thông số kỹ thuật</summary>
-                {facets.data.specifications.map((spec) => (
-                  <div className="spec-filter" key={spec.name}>
-                    <label htmlFor={`spec-${spec.name}`}>{viText(spec.name)}</label>
-                    <select
-                      id={`spec-${spec.name}`}
-                      value={specs[spec.name] ?? ""}
-                      onChange={(event) =>
-                        selectSpec(spec.name, event.target.value)
-                      }
-                    >
-                      <option value="">Bất kỳ</option>
-                      {spec.values.map((value) => (
-                        <option key={value} value={value}>
-                          {viText(value)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </details>
-            )}
             <button
               className="text-button clear-filters"
               onClick={() => setParams({})}
             >
               Xóa tất cả bộ lọc
             </button>
-            {(brands.error || categories.error || facets.error) && (
+            {(brands.error || categories.error) && (
               <Notice error>
                 Không tải được một số tùy chọn lọc. Hãy tải lại trang.
               </Notice>
             )}
           </details>
           <div className="catalog-results">
-            <div className="results-toolbar">
-              <span className="muted">Chọn sản phẩm phù hợp với bạn.</span>
-              <label htmlFor="sort">
-                Sắp xếp{" "}
-                <select
-                  id="sort"
-                  value={params.get("sort") ?? "featured"}
-                  onChange={(event) => change("sort", event.target.value)}
-                >
-                  <option value="featured">Nổi bật</option>
-                  <option value="price_asc">Giá: thấp đến cao</option>
-                  <option value="price_desc">Giá: cao đến thấp</option>
-                  <option value="name">Tên</option>
-                  <option value="newest">Mới nhất</option>
-                </select>
-              </label>
-            </div>
             {catalog.loading ? (
               <Notice>Đang tải sản phẩm…</Notice>
             ) : catalog.error ? (
